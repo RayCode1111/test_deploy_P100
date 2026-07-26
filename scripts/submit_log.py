@@ -19,11 +19,40 @@ import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+def _load_env_file(dotenv_path: str | None = None) -> None:
+    """Load variables from the repository .env file, with a fallback parser."""
+    env_path = Path(dotenv_path or Path(__file__).resolve().parents[1] / ".env")
+    if not env_path.exists():
+        return
+
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(dotenv_path=env_path, override=False)
+        return
+    except ImportError:
+        pass
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip().removeprefix("export ")
+        value = value.strip()
+        if not key or key in os.environ:
+            continue
+
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+
+        os.environ[key] = value
+
+
+_load_env_file()
 
 SERVER_URL = os.environ.get("AI_LOG_SERVER", "")
 API_KEY = os.environ.get("AI_LOG_API_KEY", "")
