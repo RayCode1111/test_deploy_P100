@@ -1,6 +1,6 @@
 # [Tên Dự Án]
 
-> Tóm tắt 1 câu: [Vấn đề] → [Giải pháp AI] cho [Target User]
+> Tóm tắt 1 câu: Real Estate → [Giải pháp AI] cho [Target User]
 
 ## Vấn đề (Problem)
 
