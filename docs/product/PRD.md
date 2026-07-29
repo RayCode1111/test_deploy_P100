@@ -3,11 +3,8 @@
 **Tên sản phẩm:** AbsorptionForecast AI Agent — Trợ lý dự báo tồn kho & tốc độ hấp thụ căn hộ
 **Loại sản phẩm:** AI Agent phân tích dữ liệu & dự báo chuỗi thời gian, có giải thích (explainable) và đề xuất hành động
 **Lĩnh vực:** Bất động sản — Kinh doanh & quản lý bán hàng dự án căn hộ
-**Phiên bản:** MVP 1.0 (5 tuần)
 **Ngày cập nhật:** 29/07/2026
-**Product Owner:** Nguyễn Đức Đạt, Bùi Hoàng Vương, Nguyễn Trọng Nam, Đặng Tiến Thành
-**Người phê duyệt nghiệp vụ (HITL):** Quản lý kinh doanh (Sales Manager)
-
+**Product Owner:** G21 - T100 - Nguyễn Đức Đạt, Bùi Hoàng Vương, Nguyễn Trọng Nam, Đặng Tiến Thành
 ---
 
 ## 1. Bối cảnh
