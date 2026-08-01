@@ -60,3 +60,11 @@ out/
 # AI logs — tracked structure, ignored content
 .ai-log/*.jsonl
 .ai-log/archive/
+
+
+# Ignore other generated CSV files
+data/*.csv
+
+# But allow these two CSV files
+!data/absorption_timeseries.csv
+!data/listings_lifecycle.csv
