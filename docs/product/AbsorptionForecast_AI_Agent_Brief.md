@@ -1,255 +1,239 @@
+# PRODUCT / PROJECT BRIEF
 
+**Loại đề tài:** AI Agent phân tích & dự báo (Forecasting / Decision-support Agent)
+**Lĩnh vực:** Bất động sản — Kinh doanh & quản lý bán hàng dự án căn hộ
+**Ngày cập nhật:** 01/08/2026
+**Tài liệu chi tiết:** [PRD.md](PRD.md) (sản phẩm) · [SRS.md](SRS.md) (kỹ thuật)
 
-**PRODUCT / PROJECT BRIEF**
+---
 
-Loại đề tài:  **AI Agent phân tích & dự báo (Forecasting / Decision-support Agent)**
+## 1. Tóm tắt điều hành
 
-Lĩnh vực:  **Bất động sản – Kinh doanh & Quản lý bán hàng dự án căn hộ**
+**AbsorptionForecast AI Agent** gom dữ liệu bán hàng & tồn kho đang nằm rải rác trong các file Excel/CSV nội bộ về **một pipeline chuẩn hoá và đã kiểm tra**, tính tốc độ hấp thụ theo từng phân khu / loại căn, dự báo **ngày dự kiến hết hàng kèm khoảng tin cậy 90%**, giải thích kết quả bằng tiếng Việt, và đưa đề xuất hành động qua **luồng phê duyệt của quản lý kinh doanh có lưu vết kiểm toán**.
 
-Ngày lập brief:  **29/07/2026**
+Sản phẩm là công cụ hỗ trợ ra quyết định cho ban kinh doanh dự án căn hộ — không phải nền tảng tích hợp CRM/ERP, không tự động thực thi thay đổi giá hay chính sách chiết khấu.
 
-# **1\. Tổng quan dự án**
+| Hạng mục | Nội dung |
+| --- | --- |
+| **Tên đề tài** | AbsorptionForecast AI Agent — Trợ lý dự báo tồn kho & tốc độ hấp thụ căn hộ |
+| **Loại đề tài** | AI Agent phân tích dữ liệu & dự báo chuỗi thời gian, có giải thích và đề xuất hành động |
+| **Ngành / Lĩnh vực** | Bất động sản — Kinh doanh, quản lý bán hàng dự án căn hộ |
+| **Product Owner** | G21 - T100 — Nguyễn Đức Đạt, Bùi Hoàng Vương, Nguyễn Trọng Nam, Đặng Tiến Thành |
+| **Người phê duyệt nghiệp vụ** | Quản lý kinh doanh (Sales Manager) |
+| **Thời gian** | 3 MVP × 1 tuần + kiểm thử & triển khai = 5 tuần, sau đó 1–2 tuần pilot |
 
-| Tên đề tài | AbsorptionForecast AI Agent – Trợ lý dự báo tồn kho & tốc độ hấp thụ căn hộ |
-| :---- | :---- |
-| **Loại đề tài** | AI Agent phân tích dữ liệu & dự báo chuỗi thời gian, có giải thích (explainable) và đề xuất hành động |
-| **Ngành / Lĩnh vực** | Bất động sản – Kinh doanh, quản lý bán hàng dự án căn hộ |
-| **Product Owner** | G21 - T100 - Nguyễn Đức Đạt, Bùi Hoàng Vương, Nguyện Trọng Nam, Đặng Tiến Thành |
+---
 
-# **2\. Bối cảnh & vấn đề kinh doanh**
+## 2. Bối cảnh & vấn đề
 
-## **2.1 Bối cảnh**
+### 2.1 Bối cảnh
 
-Trong các dự án bất động sản chung cư / khu đô thị quy mô lớn, sản phẩm thường được chia thành nhiều phân khu và loại căn hộ khác nhau (diện tích, hướng, tầng, số phòng ngủ...). Tốc độ bán hàng — hay tốc độ hấp thụ — giữa các phân khu và loại căn thường không đồng đều: có loại "cháy hàng" rất nhanh, có loại tồn kho kéo dài không bán được.
+Trong các dự án chung cư / khu đô thị quy mô lớn, sản phẩm được chia thành nhiều phân khu và loại căn (diện tích, hướng, tầng, số phòng ngủ). Tốc độ hấp thụ giữa các nhóm rất không đồng đều: có loại "cháy hàng", có loại tồn kho kéo dài.
 
-Ban kinh doanh cần liên tục nắm bắt phân khu / loại căn nào sắp hết hàng để cân nhắc điều chỉnh chính sách giá, siết ưu đãi, và phân khu / loại căn nào đang bán chậm để tập trung nguồn lực sale, đẩy chính sách kích cầu kịp thời.
+Ban kinh doanh cần biết liên tục: phân khu nào **sắp hết hàng** để tăng giá / siết ưu đãi, phân khu nào **bán chậm** để tập trung nguồn lực và kích cầu. Dữ liệu trả lời hai câu hỏi này đã tồn tại trong doanh nghiệp — nhưng ở dạng phân tán và thủ công.
 
-Hiện tại việc theo dõi này chủ yếu dựa vào kinh nghiệm và cảm tính của quản lý kinh doanh, kết hợp với các bảng báo cáo Excel tổng hợp thủ công — vốn cập nhật chậm và thiếu tính hệ thống.
+### 2.2 Bốn lớp vấn đề
 
-## **2.2 Vấn đề cần giải quyết**
+| # | Vấn đề | Biểu hiện |
+| --- | --- | --- |
+| **P1** | **Dữ liệu phân tán, quản lý thủ công** | Số liệu bán hàng & tồn kho nằm ở nhiều file Excel/CSV do từng nhóm tự giữ, mỗi file một định dạng; lỗi thiếu trường, sai định dạng, trùng bản ghi chỉ lộ ra khi tổng hợp; không có phiên bản nào được coi là chuẩn |
+| **P2** | **Báo cáo chậm và thiếu nhất quán** | Tổng hợp thủ công theo tuần / theo đợt; hai người làm cùng một kỳ có thể ra hai con số khác nhau; mất nhiều giờ để dựng lại số khi lãnh đạo hỏi |
+| **P3** | **Thiếu tầm nhìn dự báo và mức độ rủi ro** | Chỉ nhìn được số đã bán trong quá khứ; không biết phân khu nào hết hàng vào ngày nào, không có mức độ tin cậy đi kèm; phán đoán dựa hoàn toàn vào kinh nghiệm cá nhân |
+| **P4** | **Thiếu cơ chế phê duyệt và vết kiểm toán** | Chính sách giá / chiết khấu quyết qua trao đổi miệng hoặc chat; sau vài tuần không truy được ai đề xuất, ai duyệt, dựa trên số liệu nào |
 
-Vấn đề của Ban kinh doanh thực chất là 3 pain point có quan hệ nhân — quả, không phải 3 mục tiêu ngang hàng: 1 pain point nền tảng (gốc) và 2 pain point nghiệp vụ cốt lõi (đầu ra).
+**Tác động:** chậm ra quyết định giá / chiết khấu · bỏ lỡ thời điểm tăng giá khi cầu cao hoặc kích cầu khi tồn lâu · phân bổ nhân sự sale không theo dữ liệu · không rà soát được chính sách nào thực sự hiệu quả.
 
-* Pain point nền tảng — Dữ liệu phi tập trung: dữ liệu bán hàng & tồn kho nằm rải rác ở nhiều nguồn (Excel, CRM, báo cáo tay...), không có một nguồn sự thật duy nhất (single source of truth), nên không thể nhìn được trạng thái thực theo thời gian thực. Đây là gốc rễ khiến 2 pain point nghiệp vụ bên dưới không được phát hiện kịp thời.  
-* Pain point nghiệp vụ \#1 — Fast-moving / sắp cạn hàng: cần biết ngay căn nào đang bán quá nhanh để giữ giá hoặc siết ưu đãi kịp thời, tránh bán rẻ hàng đang có nhu cầu cao.  
-* Pain point nghiệp vụ \#2 — Slow-moving / bán chậm: cần biết căn nào tồn lâu, hấp thụ chậm để đẩy hàng hoặc đổi chiến thuật bán trước khi tồn kho kéo dài quá lâu.
+**Ranh giới bài toán:** sản phẩm giải quyết **hợp nhất dữ liệu nội bộ (P1–P2)** và **hỗ trợ ra quyết định có kiểm soát (P3–P4)**. Đồng bộ với CRM/ERP, đồng bộ đa kênh Zalo và vận hành nhiều chủ đầu tư trên cùng hệ thống **không** thuộc bài toán này.
 
-Trong phạm vi MVP, pain point nền tảng (dữ liệu phi tập trung) được chọn làm lõi giải quyết trước; 2 pain point nghiệp vụ (fast-moving, slow-moving) là 2 tín hiệu / nhãn đầu ra mà hệ thống nhận diện được ngay khi dữ liệu đã tập trung — không tách thành các mục tiêu độc lập, để tránh phình phạm vi sang cả forecasting chi tiết, optimization và workflow phê duyệt cùng một lúc.
+---
 
-## **2.3 Tác động nếu không giải quyết**
+## 3. Giá trị sản phẩm
 
-* **Chậm ra quyết định:** chính sách giá / chiết khấu được điều chỉnh chậm trễ, thiếu cơ sở dữ liệu định lượng.
+AbsorptionForecast biến dữ liệu bán hàng rời rạc thành một nguồn sự thật duy nhất, rồi biến nguồn dữ liệu đó thành ba thứ ban kinh doanh cần: **biết đang ở đâu** (tốc độ hấp thụ theo phân khu, cập nhật hằng ngày), **biết sắp tới thế nào** (ngày dự kiến hết hàng, khoảng tin cậy, lời giải thích dễ hiểu và thứ tự ưu tiên hành động), và **biết quyết định của mình được ghi nhận thế nào** (đề xuất phải qua phê duyệt, mọi quyết định đều truy ngược được về dữ liệu gốc). Sản phẩm không thay quản lý kinh doanh ra quyết định — nó rút ngắn thời gian từ lúc dữ liệu phát sinh đến lúc có một đề xuất đủ cơ sở để duyệt.
 
-* **Bỏ lỡ thời điểm tối ưu:** chậm tăng giá khi cầu cao, hoặc chậm kích cầu khi hàng tồn kho lâu ngày.
+Sản phẩm phát triển theo 3 giai đoạn: **Dữ liệu → Dự báo/AI → Phê duyệt & Phân quyền**.
 
-* **Lãng phí nguồn lực sale:** phân bổ nhân sự tư vấn không dựa trên dữ liệu thực tế về tốc độ bán.
+---
 
-# **3\. Mục tiêu & kết quả kỳ vọng**
+## 4. Đối tượng người dùng
 
-**O1. Rút ngắn thời gian phát hiện & phản ứng với biến động tốc độ hấp thụ**
+| Vai trò | Mô tả |
+| --- | --- |
+| **Nhân viên kinh doanh (Sales Staff)** | Xem tốc độ hấp thụ và cảnh báo cạn hàng của các phân khu mình phụ trách để chủ động tư vấn khách |
+| **Quản lý kinh doanh (Sales Manager)** | Nạp dữ liệu, xem toàn dự án, duyệt / từ chối đề xuất chính sách, tra cứu lịch sử quyết định, quản trị người dùng |
+| **Ban điều hành (Viewer)** | Xem dashboard tổng hợp toàn dự án ở chế độ chỉ đọc để ra quyết định chiến lược |
 
-* *Baseline:* Theo dõi tốc độ bán dựa trên báo cáo Excel tổng hợp thủ công, cập nhật theo tuần / theo đợt; độ trễ phát hiện một phân khu bán chậm có thể lên tới nhiều ngày (số ngày cụ thể cần xác nhận qua khảo sát pain point ở Tuần 1).  
-* *Chỉ tiêu (SMART):* Dashboard cập nhật tối thiểu 1-2 lần/ngày; độ trễ từ khi dữ liệu bán hàng phát sinh đến khi hệ thống phát hiện & cảnh báo bất thường tồn kho giảm xuống dưới 24 giờ.  
-* *Bằng chứng / Cơ sở:* Theo báo cáo thị trường nhà ở 6 tháng đầu năm 2026 của DXS-FERI, dù nguồn cung mới tăng 16% so với cùng kỳ, lượng tiêu thụ toàn thị trường lại giảm tới 62% so với nửa cuối năm 2025 — tốc độ hấp thụ có thể đảo chiều rất nhanh, phát hiện chậm đồng nghĩa bỏ lỡ thời điểm điều chỉnh chính sách.
+---
 
-**O2. Tối ưu đối tượng & mức áp dụng chiết khấu, chính sách kích cầu**
+## 5. Lộ trình 3 MVP
 
-* *Baseline:* Nhiều chủ đầu tư hiện áp dụng chiết khấu ở mức cao (phổ biến 10–30%, một số chương trình lên tới khoảng 30%) trên diện rộng để kích thích thanh khoản, chưa phân biệt rõ phân khu / loại căn nào thực sự cần hỗ trợ.  
-* *Chỉ tiêu (SMART):* Agent xác định đúng nhóm phân khu / loại căn có nguy cơ tồn kho thực sự dựa trên tốc độ hấp thụ dự báo; mục tiêu pilot là giảm số phân khu phải nhận mức chiết khấu tối đa so với cách làm đại trà hiện tại, trên cùng một dự án thử nghiệm.  
-* *Bằng chứng / Cơ sở:* Tổng hợp báo cáo thị trường đầu năm 2026 (StockBiz, CafeBiz) cho thấy chủ đầu tư phổ biến chiết khấu 10–30%, có chương trình chiết khấu tới 11% cho thanh toán sớm trong 15 ngày — cho thấy dư địa tối ưu chi phí chiết khấu nếu nhắm đúng đối tượng thay vì áp dụng tràn lan.
+### MVP 1 — Nạp dữ liệu & Dashboard tốc độ hấp thụ *(giải quyết P1, P2)*
 
-**O3. Cải thiện tỷ lệ hấp thụ (absorption rate) tại các phân khu được theo dõi**
+- **Mục tiêu:** thay báo cáo Excel thủ công bằng một pipeline dữ liệu chuẩn hoá duy nhất; upload xong là xem được ngay tốc độ hấp thụ theo phân khu.
+- **Năng lực chính:** upload Excel/CSV theo template · kiểm tra từng dòng và báo lỗi kèm số dòng · lưu dữ liệu tập trung · dashboard biểu đồ xu hướng, bộ lọc phân khu, chỉ số tổng hợp.
+- **Tiêu chí thành công:** import được file thật của dự án pilot; số liệu dashboard đối chiếu khớp báo cáo Excel hiện tại; biểu đồ tải dưới 2 giây.
+- **Không làm ở giai đoạn này:** dự báo, giải thích AI, đăng nhập, phê duyệt.
 
-* *Baseline:* Tỷ lệ hấp thụ bình quân toàn thị trường 6 tháng đầu năm 2026 vào khoảng 70% (\~26.000 trên tổng số \~37.300 sản phẩm mở bán mới được tiêu thụ).  
-* *Chỉ tiêu (SMART):* Trong giai đoạn pilot, so sánh tỷ lệ hấp thụ giữa nhóm phân khu có áp dụng đề xuất hành động của Agent và nhóm không áp dụng (thiết kế A/B); mục tiêu nhóm có can thiệp đạt tỷ lệ hấp thụ cao hơn baseline ngành, mức chênh lệch cụ thể xác định sau khi có dữ liệu pilot thực tế.  
-* *Bằng chứng / Cơ sở:* Baseline ngành theo báo cáo thị trường nhà ở 6 tháng đầu năm 2026 (DXS-FERI); đây là chỉ số đo lường trực tiếp bằng dữ liệu bán hàng thực tế của dự án pilot, không phụ thuộc khảo sát định tính.
+### MVP 2 — Dự báo, giải thích & cảnh báo *(giải quyết P3)*
 
-**O4. Nâng cao độ chính xác dự báo so với ước tính cảm tính**
+- **Mục tiêu:** chuyển từ nhìn lại quá khứ sang nhìn trước rủi ro tồn kho.
+- **Năng lực chính:** dự báo Prophet chạy tự động hằng ngày · ngày dự kiến hết hàng kèm khoảng tin cậy 90% · giải thích tiếng Việt các yếu tố ảnh hưởng · cảnh báo cạn hàng theo ngưỡng do quản lý cấu hình · xếp hạng phân khu theo mức rủi ro kèm hướng hành động · hiển thị tiến độ chạy dự báo theo thời gian thực · báo cáo sai số dự báo (MAPE).
+- **Tiêu chí thành công:** 100% dự báo có khoảng tin cậy và giả định; mỗi dự báo có đoạn giải thích đọc hiểu được; cảnh báo đúng phân khu và đúng số ngày; MAPE được đo trên dữ liệu pilot.
+- **Không làm ở giai đoạn này:** phê duyệt, phân quyền, so sánh nhiều mô hình, mô phỏng what-if.
 
-* *Baseline:* Dự báo hiện dựa hoàn toàn vào kinh nghiệm / cảm tính của quản lý kinh doanh, không được đo lường sai số một cách hệ thống, không có cơ sở để cải thiện qua thời gian.  
-* *Chỉ tiêu (SMART):* Mô hình dự báo (Prophet \+ Agent) có sai số (MAPE) được đo lường và công bố sau mỗi chu kỳ đánh giá, cải thiện liên tục qua các lần huấn luyện lại; 100% dự báo có kèm khoảng tin cậy rõ ràng.  
-* *Bằng chứng / Cơ sở:* Một nghiên cứu trên hơn 60.000 dự báo tại 4 công ty chuỗi cung ứng (Fildes et al., *International Journal of Forecasting*) cho thấy 75% dự báo bị điều chỉnh theo cảm tính nhưng phần lớn điều chỉnh nhỏ làm giảm độ chính xác; một nghiên cứu khác ghi nhận việc kết hợp dự báo thống kê với quy tắc điều chỉnh có kỷ luật giúp cải thiện 3–11 điểm phần trăm độ chính xác so với điều chỉnh cảm tính không kiểm soát.
+### MVP 3 — Phê duyệt, phân quyền & kiểm toán *(giải quyết P4)*
 
-**O5. Đảm bảo 100% quyết định chính sách có kiểm soát của con người (HITL)**
+- **Mục tiêu:** biến đề xuất của hệ thống thành quyết định có người chịu trách nhiệm và có vết truy ngược.
+- **Năng lực chính:** đăng nhập và phân quyền 3 vai trò · đề xuất mặc định *Chờ duyệt*, chỉ có hiệu lực sau khi Manager duyệt, từ chối bắt buộc nêu lý do · nhật ký kiểm toán không sửa được · trạng thái đề xuất cập nhật ngay trên màn hình đang mở · gán vai trò và phân khu phụ trách.
+- **Tiêu chí thành công:** 100% đề xuất đi qua bước duyệt, 0 trường hợp có hiệu lực mà không có quyết định của Manager; nhân viên không truy cập được dữ liệu ngoài phạm vi phân công; từ một quyết định truy ngược được về dự báo nguồn và file dữ liệu đã tạo ra nó.
+- **Không làm ở giai đoạn này:** SSO/OAuth2, xác thực đa yếu tố, thông báo ngoài ứng dụng, phân quyền theo từng trường dữ liệu.
 
-* *Baseline:* Quyết định hiện hoàn toàn do con người thực hiện thủ công; khi có AI Agent hỗ trợ, phát sinh rủi ro mới là khả năng tự động hoá vượt tầm kiểm soát nếu không thiết kế đúng.  
-* *Chỉ tiêu (SMART):* 100% đề xuất chính sách giá / chiết khấu từ Agent được quản lý kinh doanh phê duyệt trước khi áp dụng; 0 trường hợp chính sách tự động thực thi mà không qua duyệt, kiểm tra được qua log hệ thống.  
-* *Bằng chứng / Cơ sở:* Ràng buộc bắt buộc theo yêu cầu đề tài (Mục 9 – Ràng buộc); chỉ tiêu 100%/0 trường hợp là chỉ số kiểm toán (audit) khả thi, đo lường được ngay từ giai đoạn MVP.
+---
 
-# **4\. Đối tượng người dùng**
+## 6. Luồng nghiệp vụ chính
 
-| Nhân viên kinh doanh(Sales Staff) | Theo dõi tốc độ bán theo phân khu / loại căn phụ trách; nhận cảnh báo khi căn hộ sắp cạn hàng để chủ động tư vấn khách. |
-| :---- | :---- |
-| **Quản lý kinh doanh(Sales Manager)** | Xem báo cáo tổng hợp toàn dự án; duyệt hoặc từ chối các đề xuất dự báo và hành động chính sách trước khi áp dụng (HITL). |
-| **Ban điều hành / Lãnh đạo dự án** | Theo dõi báo cáo tổng quan định kỳ để ra quyết định chiến lược (giá bán, tiến độ mở bán các giai đoạn tiếp theo). |
+1. **Nạp và kiểm tra dữ liệu** — Manager tải file Excel/CSV lên; hệ thống kiểm tra từng dòng, trả danh sách lỗi để sửa; dữ liệu hợp lệ được lưu và tính lại tốc độ hấp thụ; nhân viên mở dashboard xem phân khu mình phụ trách.
+2. **Chạy dự báo và đọc giải thích** — job dự báo chạy tự động hằng ngày (hoặc Manager kích hoạt sau khi nạp dữ liệu mới); người dùng theo dõi tiến độ trên màn hình; kết quả gồm ngày dự kiến hết hàng, khoảng tin cậy, giải thích tiếng Việt, cảnh báo và bảng xếp hạng rủi ro.
+3. **Duyệt đề xuất và truy vết** — Manager mở danh sách đề xuất *Chờ duyệt*, xem dự báo và giải thích kèm theo, duyệt hoặc từ chối kèm lý do; trạng thái cập nhật ngay cho các thành viên đang mở dashboard; quyết định được ghi vào nhật ký kiểm toán để rà soát về sau.
 
-# **5\. Phạm vi giải pháp**
+---
 
-## **5.1 Giai đoạn 1 – Cơ bản (MVP)**
+## 7. Ngoài phạm vi
+
+| Hạng mục | Ghi chú |
+| --- | --- |
+| Tích hợp CRM/ERP theo API | Dữ liệu vào chỉ qua Excel/CSV theo template |
+| Thông báo qua Zalo, email, Slack | Cảnh báo hiển thị trong ứng dụng |
+| SSO / OAuth2 | Đăng nhập bằng tài khoản riêng của hệ thống |
+| Xác thực đa yếu tố (MFA) | — |
+| Multi-tenant nhiều chủ đầu tư | Phạm vi 1 dự án pilot, có thể mở rộng theo dự án |
+| So sánh mô hình ARIMA / mô hình học máy khác | Chỉ dùng Prophet |
+| Mô phỏng what-if thay đổi giá / chính sách | — |
+| Tự động huấn luyện lại mô hình | Huấn luyện lại do đội kỹ thuật chủ động |
+| Agent tự động thực thi thay đổi giá / chiết khấu | Bắt buộc phê duyệt của con người |
+| Giao dịch tài chính, thanh toán, ký hợp đồng | Ngoài bài toán |
 
-* Ứng dụng web dành cho nhân viên kinh doanh và quản lý kinh doanh.
+---
 
-* Nạp dữ liệu bán hàng & tồn kho (import file Excel/CSV định kỳ, hoặc kết nối trực tiếp CRM nội bộ).
+## 8. Kiến trúc & công nghệ
 
-* Tính toán & hiển thị tốc độ hấp thụ theo phân khu / loại căn (biểu đồ xu hướng theo thời gian).
+Luồng xử lý: dữ liệu bán hàng / tồn kho → lưu trữ tập trung → dự báo & phân tích → giải thích bằng ngôn ngữ tự nhiên → dashboard → quản lý duyệt → hành động chính sách.
 
-* Cảnh báo tự động khi phát hiện nguy cơ cạn hàng (ngày dự kiến hết hàng theo từng phân khu / loại căn).
+| Thành phần | Công nghệ |
+| --- | --- |
+| Dữ liệu | PostgreSQL — nguồn sự thật duy nhất cho dữ liệu, dự báo, đề xuất và nhật ký kiểm toán |
+| Dự báo | Prophet (Python) |
+| Điều phối & giải thích | LangGraph + LLM |
+| API | FastAPI |
+| Giao diện | ReactJS |
+| Cập nhật real-time | WebSocket |
+| Triển khai | Fly.io (thay thế: Render) |
 
-* Giải thích cơ bản, bằng ngôn ngữ tự nhiên (do LLM sinh), về các yếu tố ảnh hưởng đến tốc độ bán.
+---
 
-* Luồng phê duyệt HITL cơ bản: quản lý kinh doanh xem, duyệt hoặc từ chối dự báo / đề xuất trước khi áp dụng.
+## 9. Ràng buộc
 
-## **5.2 Giai đoạn 2 – Nâng cao**
+- **Phê duyệt bắt buộc:** mọi quyết định chính sách dựa trên dự báo phải qua quản lý kinh doanh; hệ thống không tự thực thi thay đổi giá / chính sách.
+- **Minh bạch dự báo:** mỗi dự báo kèm khoảng tin cậy và giả định rõ ràng, tránh hiểu lầm là số liệu chắc chắn.
+- **Bảo mật dữ liệu:** dữ liệu bán hàng là thông tin nhạy cảm — phân quyền theo vai trò, dữ liệu khách hàng được ẩn danh trước khi đưa vào hệ thống.
+- **Kiểm soát chi phí:** giới hạn tần suất tính lại mô hình và gọi LLM ở mức 1 lần/ngày/phân khu trừ khi có dữ liệu mới.
 
-* Agent tự động lựa chọn và so sánh nhiều mô hình dự báo (Prophet, ARIMA, mô hình học máy khác), chọn mô hình phù hợp nhất theo từng phân khu / loại căn.
+---
 
-* Mô phỏng tác động của thay đổi chính sách / giá (what-if analysis) trước khi áp dụng thực tế.
+## 10. Mục tiêu kinh doanh
 
-* Gợi ý và xếp hạng ưu tiên đẩy hàng tự động theo mức độ rủi ro tồn kho.
+| ID | Mục tiêu | Chỉ tiêu |
+| --- | --- | --- |
+| **O1** | Rút ngắn thời gian phát hiện biến động tốc độ hấp thụ | Dashboard cập nhật tối thiểu 1 lần/ngày; độ trễ từ khi có dữ liệu đến khi cảnh báo < 24 giờ *(baseline: báo cáo Excel theo tuần)* |
+| **O2** | Nhắm đúng đối tượng cần chính sách kích cầu | Xếp nhóm phân khu theo mức rủi ro tồn kho; giảm số phân khu phải nhận mức chiết khấu tối đa so với cách áp dụng đại trà *(baseline thị trường: chiết khấu 10–30% trên diện rộng)* |
+| **O3** | Cải thiện tỷ lệ hấp thụ ở phân khu được theo dõi | So sánh tỷ lệ hấp thụ giữa nhóm áp dụng và không áp dụng đề xuất trong pilot *(baseline ngành ~70%, DXS-FERI 6T/2026)* |
+| **O4** | Nâng độ chính xác dự báo so với ước tính cảm tính | MAPE được đo và công bố sau mỗi chu kỳ đánh giá; 100% dự báo kèm khoảng tin cậy |
+| **O5** | Đảm bảo kiểm soát của con người | 100% đề xuất được duyệt trước khi áp dụng; 0 trường hợp tự động thực thi, kiểm chứng qua log |
 
-* Cảnh báo chủ động qua đa kênh (email, Zalo, Slack...) thay vì chỉ hiển thị trên dashboard.
+---
 
-* Theo dõi và đánh giá sai số dự báo theo thời gian (MAPE), tự động đề xuất tinh chỉnh / huấn luyện lại mô hình.
+## 11. Chỉ số thành công của MVP
 
-# **6\. Yêu cầu chức năng & User Stories**
+| Chỉ số | Cách đo |
+| --- | --- |
+| Tỷ lệ import thành công | % file upload được xử lý thành công; số lỗi dữ liệu phát hiện được theo dòng |
+| Độ tươi của dashboard | Dữ liệu và dự báo cập nhật tối thiểu 1 lần/ngày; hiển thị mốc cập nhật gần nhất |
+| Tỷ lệ hoàn tất job dự báo | % phân khu có dự báo sau mỗi lần chạy hằng ngày; số phân khu lỗi |
+| Độ chính xác dự báo | MAPE trung bình theo phân khu, đo trên tập kiểm chứng của dữ liệu pilot |
+| Khả năng theo dõi tiến độ | Người dùng thấy được tiến độ job dự báo theo thời gian thực; có cơ chế thay thế khi mất kết nối |
+| Truy vết phê duyệt | 100% quyết định duyệt / từ chối có đủ người thực hiện, thời điểm, lý do; truy ngược được về dự báo và file dữ liệu nguồn |
+| Mức độ sử dụng | Số lượt truy cập dashboard mỗi tuần của nhân viên và quản lý trong pilot |
 
-| ID | User Story | Tiêu chí chấp nhận | Ưu tiên |
-| :---- | :---- | :---- | :---- |
-| **FR-01** | Là nhân viên kinh doanh, tôi muốn xem tốc độ hấp thụ của phân khu / loại căn mình phụ trách để biết căn nào cần tư vấn gấp. | Dashboard hiển thị tốc độ hấp thụ theo phân khu / loại căn, cập nhật ít nhất 1 lần/ngày. | **MVP** |
-| **FR-02** | Là nhân viên kinh doanh, tôi muốn nhận cảnh báo khi một loại căn sắp hết hàng để chủ động tư vấn khách. | Hệ thống cảnh báo trong app khi tồn kho dự kiến dưới ngưỡng ngày quy định. | **MVP** |
-| **FR-03** | Là quản lý kinh doanh, tôi muốn xem giải thích các yếu tố ảnh hưởng đến tốc độ bán để hiểu nguyên nhân. | Mỗi dự báo có đoạn giải thích bằng ngôn ngữ tự nhiên, liệt kê yếu tố chính. | **MVP** |
-| **FR-04** | Là quản lý kinh doanh, tôi muốn duyệt hoặc từ chối đề xuất chính sách trước khi áp dụng. | Đề xuất chỉ có hiệu lực sau khi quản lý xác nhận duyệt (HITL). | **MVP** |
-| **FR-05** | Là quản lý kinh doanh, tôi muốn xem khoảng tin cậy của mỗi dự báo để đánh giá độ rủi ro. | Mỗi số liệu dự báo hiển thị kèm khoảng tin cậy (ví dụ 90%). | **MVP** |
-| **FR-06** | Là Agent, tôi cần tự động lựa chọn mô hình dự báo phù hợp nhất cho từng phân khu. | Agent so sánh từ 2 mô hình trở lên, chọn mô hình có MAPE thấp nhất. | **Nâng cao** |
-| **FR-07** | Là quản lý kinh doanh, tôi muốn mô phỏng tác động thay đổi giá trước khi quyết định. | Cho phép nhập kịch bản giá / chính sách và xem dự báo tốc độ bán thay đổi tương ứng. | **Nâng cao** |
-| **FR-08** | Là hệ thống, tôi cần đánh giá sai số dự báo theo thời gian để cải thiện mô hình. | Có báo cáo MAPE theo thời gian, cảnh báo khi sai số vượt ngưỡng. | **Nâng cao** |
+---
 
-# **7\. Yêu cầu phi chức năng**
+## 12. Kế hoạch triển khai
 
-* **Bảo mật:** phân quyền truy cập theo vai trò (RBAC); mã hoá dữ liệu bán hàng nhạy cảm; không để lộ dữ liệu khách hàng ra ngoài phạm vi nội bộ.
+| Giai đoạn | Nội dung chính |
+| --- | --- |
+| **Tuần 1** | Chốt scope với ban kinh doanh: template dữ liệu, ngưỡng cảnh báo, phân khu pilot; thiết kế dữ liệu & kiến trúc |
+| **Tuần 2** | **MVP 1** — pipeline import & kiểm tra dữ liệu, dashboard tốc độ hấp thụ |
+| **Tuần 3** | **MVP 2** — dự báo Prophet, giải thích, cảnh báo cạn hàng, tiến độ real-time |
+| **Tuần 4** | **MVP 3** — đăng nhập & phân quyền, luồng phê duyệt, nhật ký kiểm toán |
+| **Tuần 5** | Kiểm thử đầu-cuối, tối ưu mô hình, triển khai môi trường pilot, demo & thu phản hồi |
 
-* **Tần suất cập nhật:** cập nhật dữ liệu tối thiểu theo lô hàng ngày (daily batch); mục tiêu dài hạn là near real-time.
+---
 
-* **Kiểm soát chi phí:** giới hạn tần suất gọi mô hình / LLM tính toán lại (ví dụ không tính lại quá 1 lần/ngày/phân khu trừ khi có dữ liệu mới); theo dõi chi phí API và compute định kỳ.
+## 13. Rủi ro & phương án giảm thiểu
 
-* **Độ tin cậy:** toàn bộ dự báo phải đi kèm khoảng tin cậy và giả định rõ ràng (dữ liệu đầu vào, khung thời gian dự báo).
+| Rủi ro | Ảnh hưởng | Giảm thiểu |
+| --- | --- | --- |
+| Không kịp có dữ liệu thực tế của dự án pilot | Trễ toàn bộ tiến độ | Yêu cầu dữ liệu ngay Tuần 1; phát triển song song trên bộ dữ liệu mẫu đúng template |
+| Dữ liệu lịch sử mỏng / chất lượng thấp | Dự báo kém chính xác | Kiểm tra dữ liệu đầu vào; gắn nhãn "độ tin cậy thấp"; yêu cầu duyệt kỹ hơn khi thiếu dữ liệu |
+| Người dùng phụ thuộc quá mức vào AI | Quyết định chính sách sai lệch | Duy trì phê duyệt bắt buộc; hiển thị khoảng tin cậy và giả định trên mọi đề xuất |
+| Chi phí compute / gọi LLM vượt dự kiến | Vượt ngân sách pilot | Giới hạn 1 lần/ngày/phân khu; theo dõi số lượt gọi |
+| Tiến độ 5 tuần không đủ cho toàn bộ phạm vi | Không nghiệm thu được | Ưu tiên hoàn thành lần lượt MVP 1 → 2 → 3; cắt hạng mục ưu tiên thấp sang giai đoạn pilot |
 
-* **Khả năng mở rộng:** kiến trúc cho phép mở rộng sang nhiều dự án / phân khu khác nhau.
+---
 
-* **Khả năng kiểm toán:** lưu lại lịch sử các dự báo, đề xuất và quyết định duyệt / từ chối của quản lý kinh doanh.
+## 14. Các bên liên quan
 
-# **8\. Kiến trúc giải pháp & công nghệ đề xuất**
+| Bên liên quan | Vai trò |
+| --- | --- |
+| Product Owner (học viên) | Định nghĩa yêu cầu, phạm vi, ưu tiên tính năng |
+| Ban Kinh doanh (Sales) | Người dùng chính; cung cấp dữ liệu nghiệp vụ và phản hồi |
+| Đội kỹ thuật (Data/AI, Backend, Frontend) | Xây dựng, kiểm thử và triển khai hệ thống |
+| Giảng viên / Mentor VinUni × Vingroup | Đánh giá tiến độ, góp ý chuyên môn |
 
-Luồng xử lý tổng quát: dữ liệu bán hàng / tồn kho → tầng dữ liệu → Agent phân tích → mô hình dự báo \+ LLM diễn giải → dashboard → quản lý kinh doanh duyệt (HITL) → hành động chính sách.
+---
 
-| Tầng dữ liệu | DuckDB / PostgreSQL — lưu trữ dữ liệu bán hàng, tồn kho theo thời gian. |
-| :---- | :---- |
-| **Tầng dự báo** | Mô hình chuỗi thời gian đơn giản / Prophet (Python), kết hợp LLM diễn giải kết quả bằng ngôn ngữ tự nhiên. |
-| **Tầng điều phối Agent** | LangGraph — điều phối luồng phân tích, dự báo, giải thích và đề xuất hành động. |
-| **Tầng API** | FastAPI — cung cấp API cho dashboard và các dịch vụ nội bộ. |
-| **Tầng giao diện** | Next.js — dashboard biểu đồ trực quan cho nhân viên kinh doanh và quản lý. |
-| **Triển khai** | [Fly.io](http://Fly.io). Railway, Render |
+## 15. Quy mô thị trường
 
-# **9\. Ràng buộc**
+Theo số liệu quý I/2026 của Bộ Xây dựng và VARS, cả nước có hơn 1.360 dự án nhà ở đang triển khai với quy mô khoảng 654.000 căn; nguồn cung mới năm 2026 ước tính khoảng 150.000 sản phẩm — đây là quy mô tiềm năng (TAM) cho giải pháp số hoá quản lý và dự báo tốc độ bán hàng theo phân khu.
 
-* **HITL bắt buộc:** mọi quyết định chính sách bán hàng dựa trên dự báo phải được quản lý kinh doanh phê duyệt trước khi áp dụng; Agent không được tự động thực thi thay đổi giá / chính sách.
+- **SAM:** nhóm chủ đầu tư có nhiều dự án / phân khu mở bán song song — nơi bài toán theo dõi hàng trăm loại căn phức tạp nhất. Bốn nhà phát triển lớn nhất (Vingroup, Masterise Homes, MIK, Sun Group) chiếm 64% tổng nguồn cung (VARS 2025).
+- **SOM:** trong khuôn khổ chương trình đào tạo, pilot giới hạn ở **1 dự án với 2–3 phân khu đại diện** (ít nhất 1 bán chạy, 1 bán chậm).
 
-* **Minh bạch dự báo:** mỗi dự báo phải kèm khoảng tin cậy và giả định rõ ràng, tránh gây hiểu lầm đây là số liệu chắc chắn.
+*Số liệu thị trường mang tính tham khảo để minh hoạ quy mô cơ hội; phạm vi triển khai thực tế giới hạn ở SOM nêu trên.*
 
-* **Bảo mật dữ liệu:** dữ liệu bán hàng là thông tin nhạy cảm, cần tuân thủ chính sách bảo mật nội bộ và phân quyền truy cập chặt chẽ.
+---
 
-* **Kiểm soát chi phí:** tần suất tính toán lại mô hình / gọi LLM cần được giới hạn để kiểm soát chi phí vận hành định kỳ.
+## 16. Kế hoạch xác thực (Traction)
 
-# **10\. Rủi ro & phương án giảm thiểu**
+- **Pilot phạm vi nhỏ:** 1 dự án, 2–3 phân khu đại diện, kiểm chứng mô hình dự báo trên dữ liệu thật.
+- **Người dùng thử nghiệm:** 3–5 nhân viên kinh doanh + 1 quản lý kinh doanh, dùng dashboard trong suốt giai đoạn pilot, phản hồi hằng tuần.
+- **Mốc thành công ban đầu:** MAPE ở mức chấp nhận được trên dữ liệu pilot; có ít nhất 1 đề xuất được quản lý duyệt và áp dụng thực tế; đa số người dùng đánh giá dashboard hữu ích hơn báo cáo Excel hiện tại.
+- **Mở rộng sau pilot:** mở rộng dần sang toàn bộ phân khu của dự án, sau đó xem xét các dự án khác trong danh mục.
 
-| Rủi ro | Ảnh hưởng | Phương án giảm thiểu |
-| :---- | :---- | :---- |
-| Dữ liệu lịch sử không đầy đủ / chất lượng thấp trong giai đoạn đầu. | Dự báo kém chính xác. | Hiển thị rõ mức độ tin cậy thấp; yêu cầu duyệt kỹ hơn khi thiếu dữ liệu; validate dữ liệu đầu vào. |
-| Người dùng phụ thuộc quá mức vào AI, bỏ qua đánh giá thực tế. | Quyết định chính sách sai lệch. | Duy trì cơ chế HITL bắt buộc; đào tạo người dùng hiểu rõ giới hạn của mô hình. |
-| Chi phí tính toán / gọi API tăng khi mở rộng số phân khu, dự án. | Vượt ngân sách vận hành. | Giới hạn tần suất tính toán lại; theo dõi và cảnh báo chi phí định kỳ. |
-| Thay đổi mô hình dự báo ở Giai đoạn 2 gây sai lệch tạm thời so với mô hình cũ. | Giảm niềm tin của người dùng. | Chạy song song (A/B) và so sánh MAPE trước khi thay thế mô hình chính thức. |
+---
 
-# **11\. Chỉ số thành công (Success Metrics / KPIs)**
+## 17. Đề xuất hỗ trợ (Ask)
 
-* **Độ chính xác dự báo:** MAPE trung bình theo phân khu / loại căn, cải thiện dần qua các đợt đánh giá.
+- **Dữ liệu:** quyền truy cập dữ liệu bán hàng & tồn kho lịch sử (đã ẩn danh) của ít nhất 1 dự án thực tế.
+- **Đầu mối nghiệp vụ:** 1 quản lý kinh doanh làm đầu mối duyệt dự báo và xác nhận tiêu chí cảnh báo cạn hàng.
+- **Cố vấn kỹ thuật:** hỗ trợ về lựa chọn mô hình dự báo và thiết kế kiến trúc agent.
+- **Hạ tầng:** ngân sách thử nghiệm cho compute và gọi API LLM ở mức nhỏ.
+- **Thời gian:** 5 tuần hoàn thành 3 MVP, cộng 1–2 tuần pilot trước khi báo cáo kết quả cuối khoá.
 
-* **Thời gian ra quyết định:** thời gian trung bình từ khi phát hiện bất thường tồn kho đến khi chính sách được duyệt và áp dụng.
+---
 
-* **Tỷ lệ cảnh báo chính xác:** phần trăm cảnh báo cạn hàng được xác nhận đúng trên thực tế.
+## 18. Giả định
 
-* **Mức độ sử dụng:** số lượt truy cập dashboard mỗi tuần của nhân viên kinh doanh và quản lý.
-
-* **Mức độ hài lòng người dùng:** khảo sát định kỳ với Ban kinh doanh.
-
-# **12\. Kế hoạch triển khai đề xuất**
-
-| Giai đoạn  | Nội dung chính |
-| :---- | :---- |
-| **Tuần 1** | Tập trung xác định Problem Statement, nghiên cứu painpoint, xác định rõ Scope và Input/Output, xây dựng luồng workflow dự án. |
-| **Tuần 2** | Thu thập, làm sạch dữ liệu bán hàng / tồn kho; thiết kế schema dữ liệu (DuckDB/Postgres); thiết kế kiến trúc tổng thể. |
-| **Tuần 3** | Xây dựng mô hình dự báo cơ bản (Prophet); xây dựng LangGraph agent phân tích; xây dựng API (FastAPI). |
-| **Tuần 4** | Xây dựng dashboard Next.js; tích hợp luồng phê duyệt HITL; tích hợp LLM diễn giải kết quả. |
-| **Tuần 5** | Kiểm thử, tối ưu mô hình và triển khai ([Fly.io](http://Fly.io), Railway, Render) |
-| **Tuần 6** | Demo và thu thập phản hồi |
-
-# **13\. Các bên liên quan**
-
-| Product Owner (học viên) | Định nghĩa yêu cầu, phạm vi, ưu tiên tính năng; chịu trách nhiệm chung về sản phẩm. |
-| :---- | :---- |
-| **Ban Kinh doanh (Sales)** | Người dùng chính; cung cấp dữ liệu nghiệp vụ và phản hồi trong quá trình phát triển. |
-| **Đội kỹ thuật (Data/AI, Backend, Frontend)** | Xây dựng, kiểm thử và triển khai hệ thống. |
-| **Giảng viên / Mentor chương trình VinUni × Vingroup** | Đánh giá tiến độ, góp ý chuyên môn và định hướng sản phẩm. |
-
-# **14\. Quy mô thị trường (Market)**
-
-Theo số liệu quý I/2026 của Bộ Xây dựng và Hội Môi giới Bất động sản Việt Nam (VARS), cả nước hiện có hơn 1.360 dự án nhà ở đang triển khai với quy mô khoảng 654.000 căn, tổng lượng giao dịch quý I/2026 đạt gần 140.000 căn; nguồn cung nhà ở mới cho cả năm 2026 được ước tính khoảng 150.000 sản phẩm trên toàn quốc. Đây là quy mô thị trường tiềm năng (TAM) cho một giải pháp số hoá quản lý và dự báo tốc độ bán hàng theo phân khu / loại căn.
-
-* **Thị trường mục tiêu (SAM):** nhóm chủ đầu tư sở hữu nhiều dự án / phân khu quy mô lớn — nơi bài toán theo dõi tốc độ hấp thụ theo hàng trăm loại căn trở nên phức tạp và có giá trị cao nhất. Theo báo cáo năm 2025 của Hội Môi giới Bất động sản Việt Nam, 4 nhà phát triển lớn nhất thị trường (Vingroup, Masterise Homes, MIK, Sun Group) chiếm tới 64% tổng nguồn cung, và nguồn cung 2026 được dự báo tiếp tục tăng hơn 40%, chủ yếu đến từ nhóm này — đây chính là nhóm khách hàng có nhiều phân khu / dự án mở bán song song, phù hợp nhất với AI Agent.
-
-* **Thị trường khả thi ban đầu (SOM):** trong phạm vi chương trình đào tạo, phạm vi triển khai ban đầu (pilot) giới hạn ở 1 dự án cụ thể với 2–3 phân khu / loại căn đại diện, trước khi cân nhắc nhân rộng sang các dự án và chủ đầu tư khác.
-
-* **Xu hướng hỗ trợ:** thị trường đang bước vào giai đoạn sàng lọc và tái cấu trúc, nguồn lực tập trung vào các chủ đầu tư có năng lực tài chính và vận hành mạnh — đây là nhóm sẵn sàng đầu tư vào công cụ số hoá để tối ưu tốc độ bán hàng và dòng tiền.
-
-*Lưu ý: số liệu trên mang tính tham khảo ở cấp độ toàn thị trường, dùng để minh hoạ quy mô cơ hội; phạm vi triển khai thực tế của đề tài trong khuôn khổ chương trình đào tạo sẽ giới hạn ở SOM nêu trên.*
-
-# **15\. Kế hoạch xác thực ban đầu (Traction)**
-
-Vì đây là đề tài xây dựng mới trong khuôn khổ chương trình đào tạo, sản phẩm chưa có traction thực tế. Brief đề xuất một kế hoạch xác thực (validate) sớm nhằm tạo bằng chứng ban đầu trước khi cân nhắc nhân rộng:
-
-* **Pilot phạm vi nhỏ:** triển khai thử nghiệm trên 1 dự án với 2–3 phân khu / loại căn đại diện (ví dụ: 1 phân khu bán chạy, 1 phân khu bán chậm) để kiểm chứng mô hình dự báo trên dữ liệu thực tế.
-
-* **Người dùng thử nghiệm:** thu thập phản hồi định kỳ hằng tuần từ 3–5 nhân viên kinh doanh và 1 quản lý kinh doanh, trực tiếp sử dụng dashboard trong 4 tuần triển khai MVP.
-
-* **Mốc thành công ban đầu:** mô hình dự báo đạt sai số (MAPE) ở mức chấp nhận được trên dữ liệu pilot; có ít nhất 1 đề xuất hành động từ Agent được quản lý kinh doanh phê duyệt và áp dụng thực tế; đa số người dùng thử nghiệm đánh giá dashboard hữu ích hơn báo cáo Excel hiện tại qua khảo sát nhanh.
-
-* **Mở rộng sau pilot:** nếu đạt các mốc trên, mở rộng dần sang toàn bộ phân khu của dự án, sau đó xem xét nhân rộng sang các dự án khác trong danh mục chủ đầu tư.
-
-# **16\. Đề xuất hỗ trợ tiếp theo (Ask)**
-
-Để đưa brief này từ ý tưởng sang triển khai thực tế, học viên / nhóm đề xuất một số hỗ trợ cụ thể sau:
-
-* **Dữ liệu:** quyền truy cập dữ liệu bán hàng & tồn kho lịch sử (đã ẩn danh hoá phần nhạy cảm) của ít nhất 1 dự án thực tế, để huấn luyện và kiểm chứng mô hình dự báo.
-
-* **Đầu mối nghiệp vụ:** 1 quản lý kinh doanh tham gia làm đầu mối duyệt dự báo, góp ý tiêu chí cảnh báo cạn hàng và xác nhận tính hợp lý của các đề xuất hành động.
-
-* **Cố vấn kỹ thuật:** hỗ trợ từ giảng viên / mentor chương trình về lựa chọn mô hình dự báo phù hợp và thiết kế kiến trúc LangGraph agent.
-
-* **Hạ tầng tính toán:** ngân sách / tài khoản thử nghiệm cho compute và gọi API LLM trong giai đoạn pilot, ở mức chi phí thử nghiệm nhỏ.
-
-* **Thời gian:** 4 tuần để hoàn thành MVP theo kế hoạch ở Mục 12, cộng thêm 1–2 tuần pilot thu thập phản hồi trước khi báo cáo kết quả cuối khoá.
-
-# **17\. Giả định**
-
-* Có sẵn dữ liệu lịch sử bán hàng và tồn kho tối thiểu vài tháng gần nhất để huấn luyện mô hình dự báo ban đầu.
-
-* Dữ liệu có thể được cung cấp qua file Excel/CSV định kỳ, hoặc kết nối API với hệ thống CRM/ERP hiện có.
-
-* Có ít nhất một quản lý kinh doanh tham gia làm đầu mối phê duyệt (HITL) trong giai đoạn thử nghiệm.
-
-# **18\. Ngoài phạm vi**
-
-* Agent không tự động thực thi thay đổi giá bán / chính sách chiết khấu mà không qua phê duyệt của con người.
-
-* Không xử lý các giao dịch tài chính, thanh toán hay ký kết hợp đồng.
-
-* Không thay thế hoàn toàn vai trò tư vấn bán hàng của nhân viên kinh doanh.
+- Có sẵn dữ liệu lịch sử bán hàng và tồn kho tối thiểu vài tháng gần nhất để huấn luyện mô hình.
+- Dữ liệu được cung cấp qua file Excel/CSV định kỳ theo template quy định.
+- Có ít nhất một quản lý kinh doanh tham gia làm đầu mối phê duyệt trong giai đoạn thử nghiệm.
+- Ngưỡng cảnh báo cạn hàng mặc định 30 ngày tồn kho dự kiến, quản lý được phép điều chỉnh.
