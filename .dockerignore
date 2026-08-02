@@ -1,6 +1,8 @@
 .git
 .gitignore
 .env
+.env.*
+!.env.example
 .venv
 __pycache__
 *.pyc
@@ -9,8 +11,8 @@ __pycache__
 docs/
 presentation/
 eval/
+frontend/
 *.md
 !requirements.txt
 .dockerignore
-Dockerfile
 docker-compose.yml

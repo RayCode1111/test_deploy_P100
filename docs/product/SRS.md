@@ -280,7 +280,7 @@ flowchart TD
 **Database Tables**:
 - `projects`: id (PK), name, launch_date, created_at
 - `areas`: id (PK), project_id (FK), area_name, unit_type, bedrooms, area_sqm, total_units
-- `upload_files`: id (PK), filename, checksum, status, rows_ok, rows_failed, uploaded_by, uploaded_at
+- `upload_files`: id (PK), project_id (FK), filename, checksum, status, rows_ok, rows_failed, uploaded_by (FK, **NULL** ở MVP 1 vì chưa có bảng `users`), uploaded_at
 - `upload_errors`: id (PK), file_id (FK), row_number, column_name, error_code, message
 - `sales_records`: id (PK), area_id (FK), file_id (FK), sold_date, units_sold
 - `inventory_snapshots`: id (PK), area_id (FK), file_id (FK), snapshot_date, units_remaining
@@ -338,15 +338,16 @@ flowchart TD
 - `JobEventPublisher`: phát sự kiện tiến độ job qua WebSocket Manager.
 
 **Database Tables** *(cộng dồn trên MVP 1)*:
-- `forecast_jobs`: id (PK), triggered_by, trigger_type (`schedule`/`manual`), status, started_at, finished_at, areas_total, areas_failed
-- `forecasts`: id (PK), area_id (FK), job_id (FK), run_at, horizon_days, velocity_forecast, ci_lower, ci_upper, sellout_date, confidence_label, mape
+- `forecast_jobs`: id (PK), triggered_by (FK, **NULL** khi `trigger_type='schedule'`), trigger_type (`schedule`/`manual`), status, started_at, finished_at, areas_total, areas_failed
+- `forecasts`: id (PK), area_id (FK), job_id (FK), **file_id (FK → `upload_files`, NOT NULL)**, run_at, horizon_days, velocity_forecast, ci_lower, ci_upper, sellout_date, confidence_label, mape
 - `forecast_points`: id (PK), forecast_id (FK), ds (date), yhat, yhat_lower, yhat_upper
 - `explanations`: id (PK), forecast_id (FK), content_vi, key_factors (JSONB), assumptions (JSONB), model_name, generated_at
 - `alerts`: id (PK), forecast_id (FK), area_id (FK), alert_type, days_to_sellout, threshold_days, severity, status, created_at, closed_at
 - `suggestions`: id (PK), forecast_id (FK), area_id (FK), risk_level, action_type (`tighten_discount`/`stimulate_demand`), rationale, created_at
 - `llm_calls`: id (PK), forecast_id (FK), model_name, prompt_tokens, completion_tokens, latency_ms, status, called_at
-- `settings`: key (PK), value (JSONB), updated_by, updated_at
-- Indexes: `forecasts(area_id, run_at DESC)` · `forecasts(job_id)` · `forecast_points(forecast_id, ds)` · `alerts(status, severity)` partial `WHERE status='open'` · `suggestions(risk_level, created_at DESC)` · `llm_calls(called_at)`
+- `settings`: key (PK), value (JSONB), updated_by *(metadata, không phải quan hệ nghiệp vụ)*, updated_at
+- Indexes: `forecasts(area_id, run_at DESC)` · `forecasts(job_id)` · `forecasts(file_id)` · `forecast_points(forecast_id, ds)` · `alerts(status, severity)` partial `WHERE status='open'` · `suggestions(risk_level, created_at DESC)` · `llm_calls(called_at)`
+- Unique constraints: `explanations(forecast_id)` UNIQUE — ép quan hệ 1–0..1 với `forecasts` ở tầng DB, không chỉ ở sơ đồ
 
 #### Frontend (React)
 - `ForecastCard`: velocity dự báo, ngày dự kiến hết hàng, dải CI 90%, badge "độ tin cậy thấp".
@@ -407,7 +408,9 @@ flowchart TD
 - `proposals`: id (PK), suggestion_id (FK), area_id (FK), status, version, created_at, closed_at *(mở rộng từ `suggestions` của MVP 2)*
 - `approvals`: id (PK), proposal_id (FK), user_id (FK), decision (`approve`/`reject`), reason, decided_at
 - `audit_logs`: id (PK), user_id (FK), role, action, entity_type, entity_id, payload (JSONB), ip_address, user_agent, created_at
-- Indexes: `users(email)` UNIQUE · `user_areas(user_id)` · `refresh_tokens(token_hash)` UNIQUE, `refresh_tokens(user_id, expires_at)` · `proposals(status, created_at DESC)` · `approvals(proposal_id)` · `audit_logs(created_at DESC)`, `audit_logs(entity_type, entity_id)`, `audit_logs(user_id, created_at DESC)`
+- Indexes: `users(email)` UNIQUE · `user_areas(user_id)` · `refresh_tokens(token_hash)` UNIQUE, `refresh_tokens(user_id, expires_at)` · `proposals(status, created_at DESC)` · `audit_logs(created_at DESC)`, `audit_logs(entity_type, entity_id)`, `audit_logs(user_id, created_at DESC)`
+- Unique constraints: `approvals(proposal_id)` UNIQUE — mỗi đề xuất đúng một quyết định cuối · `proposals(suggestion_id)` UNIQUE — ép quan hệ 1–0..1 với `suggestions`
+- `audit_logs.user_id` **NULL** cho hành động do hệ thống thực hiện (job dự báo theo lịch)
 
 **Security Requirements**:
 - **JWT**: HS256; access token TTL **30 phút**; refresh token TTL **7 ngày** có rotation, token cũ bị thu hồi khi refresh; claims gồm `sub`, `role`, `jti`, `exp`.
@@ -457,62 +460,118 @@ flowchart TD
 
 ### 5.6 ERD
 
+Mô hình dữ liệu cộng dồn theo 3 MVP. **Tên thực thể trong ERD khớp 1–1 với tên bảng vật lý ở 5.2–5.4** (`AREA` ↔ `areas`, `UPLOAD_FILE` ↔ `upload_files`…), khoá ngoại dùng đúng tên cột (`area_id`, `file_id`).
+
 ```mermaid
 erDiagram
-    PROJECT ||--o{ SEGMENT : "gồm"
-    SEGMENT ||--o{ SALES_RECORD : "có"
-    SEGMENT ||--o{ INVENTORY_SNAPSHOT : "có"
-    SEGMENT ||--o{ FORECAST : "được dự báo"
-    FORECAST ||--o| EXPLANATION : "kèm"
-    FORECAST ||--o{ ALERT : "sinh ra"
-    FORECAST ||--o{ RECOMMENDATION : "dẫn tới"
-    RECOMMENDATION ||--o{ APPROVAL : "được duyệt bởi"
-    USER ||--o{ APPROVAL : "thực hiện"
-    USER ||--o{ AUDIT_LOG : "ghi nhận"
-    USER }o--o{ SEGMENT : "được phân công"
-    IMPORT_BATCH ||--o{ SALES_RECORD : "nạp"
-    IMPORT_BATCH ||--o{ INVENTORY_SNAPSHOT : "nạp"
+    %% ===== MVP 1: Ingestion & Data =====
+    PROJECT ||--o{ AREA : "gồm"
+    PROJECT ||--o{ UPLOAD_FILE : "nhận dữ liệu"
+    USER |o--o{ UPLOAD_FILE : "tải lên"
+    UPLOAD_FILE ||--o{ UPLOAD_ERROR : "sinh lỗi validate"
+    UPLOAD_FILE ||--o{ SALES_RECORD : "nạp"
+    UPLOAD_FILE ||--o{ INVENTORY_SNAPSHOT : "nạp"
+    AREA ||--o{ SALES_RECORD : "ghi nhận bán"
+    AREA ||--o{ INVENTORY_SNAPSHOT : "có tồn kho"
+    AREA ||--o{ ABSORPTION_DAILY : "được tính hấp thụ"
 
+    %% ===== MVP 2: Forecast & AI =====
+    USER |o--o{ FORECAST_JOB : "kích hoạt"
+    FORECAST_JOB ||--o{ FORECAST : "sinh ra"
+    AREA ||--o{ FORECAST : "được dự báo"
+    UPLOAD_FILE ||--o{ FORECAST : "là dữ liệu nguồn"
+    FORECAST ||--o{ FORECAST_POINT : "gồm chuỗi điểm"
+    FORECAST ||--o| EXPLANATION : "kèm giải thích"
+    FORECAST ||--o{ ALERT : "sinh cảnh báo"
+    FORECAST ||--o{ SUGGESTION : "dẫn tới đề xuất"
+    FORECAST ||--o{ LLM_CALL : "ghi nhận lượt gọi"
+    AREA ||--o{ ALERT : "thuộc về"
+    AREA ||--o{ SUGGESTION : "thuộc về"
+
+    %% ===== MVP 3: Governance & Auth =====
+    USER ||--o{ USER_AREA : "được gán"
+    AREA ||--o{ USER_AREA : "được phân công"
+    USER ||--o{ REFRESH_TOKEN : "sở hữu"
+    SUGGESTION ||--o| PROPOSAL : "chuyển thành"
+    AREA ||--o{ PROPOSAL : "thuộc về"
+    PROPOSAL ||--o| APPROVAL : "được quyết định"
+    USER ||--o{ APPROVAL : "thực hiện"
+    USER |o--o{ AUDIT_LOG : "ghi nhận"
+
+    %% ===== MVP 1 =====
     PROJECT {
         uuid id PK
         string name
         date launch_date
+        timestamp created_at
     }
-    SEGMENT {
+    AREA {
         uuid id PK
         uuid project_id FK
-        string segment_name
+        string area_name
         string unit_type
         int bedrooms
-        float area_sqm
+        int total_units
+    }
+    UPLOAD_FILE {
+        uuid id PK
+        uuid project_id FK
+        uuid uploaded_by FK "NULL ở MVP 1"
+        string filename
+        string checksum UK
+        string status
+        int rows_ok
+        int rows_failed
+    }
+    UPLOAD_ERROR {
+        uuid id PK
+        uuid file_id FK
+        int row_number
+        string column_name
+        string error_code
+        text message
     }
     SALES_RECORD {
         uuid id PK
-        uuid segment_id FK
-        uuid import_batch_id FK
+        uuid area_id FK
+        uuid file_id FK
         date sold_date
         int units_sold
     }
     INVENTORY_SNAPSHOT {
         uuid id PK
-        uuid segment_id FK
-        uuid import_batch_id FK
+        uuid area_id FK
+        uuid file_id FK
         date snapshot_date
         int units_remaining
     }
-    IMPORT_BATCH {
+    ABSORPTION_DAILY {
         uuid id PK
-        uuid uploaded_by FK
-        timestamp uploaded_at
-        string filename
+        uuid area_id FK
+        date stat_date
+        int units_sold
+        float velocity_7d
+        float velocity_30d
+        timestamp computed_at
+    }
+
+    %% ===== MVP 2 =====
+    FORECAST_JOB {
+        uuid id PK
+        uuid project_id FK
+        uuid triggered_by FK "NULL khi chạy theo lịch"
+        string trigger_type
         string status
-        int rows_ok
-        int rows_failed
+        int areas_total
+        int areas_failed
+        timestamp started_at
+        timestamp finished_at
     }
     FORECAST {
         uuid id PK
-        uuid segment_id FK
-        uuid import_batch_id FK
+        uuid area_id FK
+        uuid job_id FK
+        uuid file_id FK
         timestamp run_at
         float velocity_forecast
         float ci_lower
@@ -521,48 +580,103 @@ erDiagram
         string confidence_label
         float mape
     }
-    EXPLANATION {
+    FORECAST_POINT {
         uuid id PK
         uuid forecast_id FK
+        date ds
+        float yhat
+        float yhat_lower
+        float yhat_upper
+    }
+    EXPLANATION {
+        uuid id PK
+        uuid forecast_id FK UK
         text content_vi
         json key_factors
         json assumptions
+        string model_name
         timestamp generated_at
     }
     ALERT {
         uuid id PK
         uuid forecast_id FK
+        uuid area_id FK
         string alert_type
         int days_to_sellout
         int threshold_days
-        timestamp created_at
+        string severity
+        string status
+        timestamp closed_at
     }
-    RECOMMENDATION {
+    SUGGESTION {
         uuid id PK
         uuid forecast_id FK
+        uuid area_id FK
         string risk_level
         string action_type
         text rationale
-        string status
         timestamp created_at
+    }
+    LLM_CALL {
+        uuid id PK
+        uuid forecast_id FK
+        string model_name
+        int prompt_tokens
+        int completion_tokens
+        int latency_ms
+        string status
+        timestamp called_at
+    }
+    SETTING {
+        string key PK
+        json value
+        uuid updated_by
+        timestamp updated_at
+    }
+
+    %% ===== MVP 3 =====
+    USER {
+        uuid id PK
+        string email UK
+        string password_hash
+        string full_name
+        string role
+        boolean is_active
+        timestamp created_at
+    }
+    USER_AREA {
+        uuid user_id PK "FK"
+        uuid area_id PK "FK"
+        timestamp assigned_at
+    }
+    REFRESH_TOKEN {
+        uuid id PK
+        uuid user_id FK
+        string token_hash UK
+        timestamp expires_at
+        timestamp revoked_at
+        uuid replaced_by FK
+    }
+    PROPOSAL {
+        uuid id PK
+        uuid suggestion_id FK UK
+        uuid area_id FK
+        string status
+        int version
+        timestamp created_at
+        timestamp closed_at
     }
     APPROVAL {
         uuid id PK
-        uuid recommendation_id FK
+        uuid proposal_id FK UK
         uuid user_id FK
         string decision
         text reason
         timestamp decided_at
     }
-    USER {
-        uuid id PK
-        string email
-        string full_name
-        string role
-    }
     AUDIT_LOG {
         uuid id PK
-        uuid user_id FK
+        uuid user_id FK "NULL khi hệ thống thực hiện"
         string action
         string entity_type
         uuid entity_id
@@ -570,6 +684,18 @@ erDiagram
         timestamp created_at
     }
 ```
+
+**Ghi chú mô hình**
+
+- **Chuỗi truy vết (SRS §7.2 · NFR-L2):** `APPROVAL → PROPOSAL → SUGGESTION → FORECAST → UPLOAD_FILE`. Cột `forecasts.file_id` (NOT NULL) là mắt xích bắt buộc — từ một quyết định phê duyệt luôn truy ngược được về lô dữ liệu đầu vào đã sinh ra dự báo.
+- `USER_AREA` dùng khoá chính tổ hợp `(user_id, area_id)`, cả hai cột đồng thời là khoá ngoại `ON DELETE CASCADE`; đây là phạm vi dữ liệu mà `RBACGuard` áp cho vai trò `sales_staff`.
+- **Optionality:** `UPLOAD_FILE.uploaded_by` NULL ở MVP 1 (chưa có bảng `users`), `FORECAST_JOB.triggered_by` NULL khi job chạy theo lịch 02:00, `AUDIT_LOG.user_id` NULL khi hành động do hệ thống thực hiện — nên ba quan hệ này vẽ `|o--o{`, không phải `||--o{`.
+- `SUGGESTION → PROPOSAL` và `PROPOSAL → APPROVAL` là 1–0..1, được ép ở tầng DB bằng UNIQUE trên `proposals(suggestion_id)` và `approvals(proposal_id)`; `EXPLANATION` tương tự với UNIQUE `explanations(forecast_id)`.
+- `PROPOSAL → APPROVAL` 1–0..1 khớp `ProposalWorkflowService`: trạng thái chuyển một chiều `pending → approved | rejected`, chặn duyệt lại đề xuất đã đóng. Lịch sử thao tác giữ ở `AUDIT_LOG`, không nhân bản trong `APPROVAL`.
+- `SETTING` là bảng cấu hình toàn cục theo `key` (ví dụ ngưỡng ngày cảnh báo), không thuộc sở hữu của người dùng nào; `updated_by` chỉ là metadata ghi ai sửa lần cuối nên **không** gắn nhãn FK và không vẽ thành cạnh quan hệ.
+- `AUDIT_LOG` là bảng **append-only đa hình**: khoá ngoại duy nhất là `USER`; thực thể bị tác động trỏ mềm qua `(entity_type, entity_id)` — dùng chung cho `PROPOSAL`, `FORECAST`, `UPLOAD_FILE`, `SETTING`. Vì vậy sơ đồ không vẽ cạnh FK từ `PROPOSAL` sang `AUDIT_LOG`.
+- `ALERT.area_id`, `SUGGESTION.area_id`, `PROPOSAL.area_id` là **denormalize có chủ đích** để lọc theo phân khu cho RBAC mà không phải join qua `FORECAST`; giá trị suy ra từ `forecasts.area_id`.
+- `FORECAST.mape` chỉ có giá trị sau khi đánh giá trên tập kiểm chứng; `NULL` ở các dự báo chưa được chấm điểm.
 
 ---
 

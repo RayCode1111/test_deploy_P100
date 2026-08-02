@@ -5,12 +5,53 @@ Reads JSON from stdin, normalizes to common format, appends to .ai-log/session.j
 """
 import json
 import os
+import re
 import sys
 import subprocess
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 VN_TZ = timezone(timedelta(hours=7))
+
+# Redact secret trước khi ghi ra .ai-log và gửi lên AI_LOG_SERVER.
+# Payload hook có thể chứa nội dung .env nếu AI tool vừa đọc file đó.
+_SECRET_RE = re.compile(
+    r"(sk-[A-Za-z0-9_\-]{8,}"
+    r"|eyJ[A-Za-z0-9._\-]{10,}"
+    r"|(?:api[_-]?key|secret|password|passwd|token)\s*[=:]\s*\S+"
+    r"|://[^:/@\s]+:[^@\s]+@)",
+    re.IGNORECASE,
+)
+_REDACT_FIELDS = (
+    "prompt",
+    "response_summary",
+    "tool_input",
+    "tool_response",
+    "tool_args",
+    "files_context",
+    "content",
+)
+
+
+def _scrub(value, depth=0):
+    """Duyệt đệ quy, KHÔNG round-trip qua JSON (regex sẽ nuốt dấu nháy)."""
+    if depth > 6:
+        return value
+    if isinstance(value, str):
+        return _SECRET_RE.sub("«redacted»", value)
+    if isinstance(value, dict):
+        return {k: _scrub(v, depth + 1) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_scrub(v, depth + 1) for v in value]
+    return value
+
+
+def redact(entry: dict) -> dict:
+    """Thay thế mọi chuỗi giống secret bằng «redacted»."""
+    for key in _REDACT_FIELDS:
+        if key in entry:
+            entry[key] = _scrub(entry[key])
+    return entry
 
 
 def git(cmd):
@@ -178,7 +219,7 @@ def main():
     log_file = log_dir / "session.jsonl"
 
     with open(log_file, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        f.write(json.dumps(redact(entry), ensure_ascii=False) + "\n")
 
     # Output valid JSON (required by some tools like Gemini)
     print(json.dumps({"status": "logged"}))
