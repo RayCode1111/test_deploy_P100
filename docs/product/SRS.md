@@ -284,7 +284,7 @@ flowchart TD
 - `upload_errors`: id (PK), file_id (FK), row_number, column_name, error_code, message
 - `sales_records`: id (PK), area_id (FK), file_id (FK), sold_date, units_sold
 - `inventory_snapshots`: id (PK), area_id (FK), file_id (FK), snapshot_date, units_remaining
-- `absorption_daily`: id (PK), area_id (FK), date, units_sold, velocity_7d, velocity_30d, computed_at
+- `absorption_daily`: id (PK), area_id (FK), stat_date, units_sold, velocity_7d, velocity_30d, computed_at *(tên cột là `stat_date`, không dùng `date` vì trùng tên kiểu của PostgreSQL)*
 - Indexes: `sales_records(area_id, sold_date)` · `inventory_snapshots(area_id, snapshot_date DESC)` · `absorption_daily(area_id, date)` UNIQUE · `upload_files(checksum)` UNIQUE · `upload_errors(file_id, row_number)`
 
 #### Frontend (React)
@@ -338,7 +338,7 @@ flowchart TD
 - `JobEventPublisher`: phát sự kiện tiến độ job qua WebSocket Manager.
 
 **Database Tables** *(cộng dồn trên MVP 1)*:
-- `forecast_jobs`: id (PK), triggered_by (FK, **NULL** khi `trigger_type='schedule'`), trigger_type (`schedule`/`manual`), status, started_at, finished_at, areas_total, areas_failed
+- `forecast_jobs`: id (PK), project_id (FK), triggered_by (FK, **NULL** khi `trigger_type='schedule'`), trigger_type (`schedule`/`manual`), status, started_at, finished_at, areas_total, areas_failed
 - `forecasts`: id (PK), area_id (FK), job_id (FK), **file_id (FK → `upload_files`, NOT NULL)**, run_at, horizon_days, velocity_forecast, ci_lower, ci_upper, sellout_date, confidence_label, mape
 - `forecast_points`: id (PK), forecast_id (FK), ds (date), yhat, yhat_lower, yhat_upper
 - `explanations`: id (PK), forecast_id (FK), content_vi, key_factors (JSONB), assumptions (JSONB), model_name, generated_at
@@ -403,7 +403,7 @@ flowchart TD
 
 **Database Tables** *(cộng dồn trên MVP 1 & 2)*:
 - `users`: id (PK), email, password_hash, full_name, role, is_active, created_at
-- `user_areas`: user_id (FK), area_id (FK) — PK tổ hợp, phân công phân khu cho Sales Staff
+- `user_areas`: user_id (FK), area_id (FK), assigned_at — PK tổ hợp `(user_id, area_id)`, phân công phân khu cho Sales Staff
 - `refresh_tokens`: id (PK), user_id (FK), token_hash, expires_at, revoked_at, replaced_by
 - `proposals`: id (PK), suggestion_id (FK), area_id (FK), status, version, created_at, closed_at *(mở rộng từ `suggestions` của MVP 2)*
 - `approvals`: id (PK), proposal_id (FK), user_id (FK), decision (`approve`/`reject`), reason, decided_at
@@ -511,6 +511,7 @@ erDiagram
         string area_name
         string unit_type
         int bedrooms
+        float area_sqm
         int total_units
     }
     UPLOAD_FILE {
@@ -522,6 +523,7 @@ erDiagram
         string status
         int rows_ok
         int rows_failed
+        timestamp uploaded_at
     }
     UPLOAD_ERROR {
         uuid id PK
@@ -573,6 +575,7 @@ erDiagram
         uuid job_id FK
         uuid file_id FK
         timestamp run_at
+        int horizon_days
         float velocity_forecast
         float ci_lower
         float ci_upper
@@ -590,7 +593,7 @@ erDiagram
     }
     EXPLANATION {
         uuid id PK
-        uuid forecast_id FK UK
+        uuid forecast_id FK,UK
         text content_vi
         json key_factors
         json assumptions
@@ -606,6 +609,7 @@ erDiagram
         int threshold_days
         string severity
         string status
+        timestamp created_at
         timestamp closed_at
     }
     SUGGESTION {
@@ -645,8 +649,8 @@ erDiagram
         timestamp created_at
     }
     USER_AREA {
-        uuid user_id PK "FK"
-        uuid area_id PK "FK"
+        uuid user_id PK,FK
+        uuid area_id PK,FK
         timestamp assigned_at
     }
     REFRESH_TOKEN {
@@ -659,7 +663,7 @@ erDiagram
     }
     PROPOSAL {
         uuid id PK
-        uuid suggestion_id FK UK
+        uuid suggestion_id FK,UK
         uuid area_id FK
         string status
         int version
@@ -668,7 +672,7 @@ erDiagram
     }
     APPROVAL {
         uuid id PK
-        uuid proposal_id FK UK
+        uuid proposal_id FK,UK
         uuid user_id FK
         string decision
         text reason
@@ -677,10 +681,13 @@ erDiagram
     AUDIT_LOG {
         uuid id PK
         uuid user_id FK "NULL khi hệ thống thực hiện"
+        string role
         string action
         string entity_type
         uuid entity_id
         json payload
+        string ip_address
+        string user_agent
         timestamp created_at
     }
 ```
