@@ -1,16 +1,4 @@
-# 🤖 AI20K Agent Template
-
-Template chính thức cho học viên **VinUni AI20K Build Phase** — bộ khung dự án sẵn sàng chạy để xây dựng một AI Agent hoàn chỉnh: kiến trúc, code, test, và deploy.
-
-> 📖 **Technical Guidebook:** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
-
-## 🎯 Template này dành cho ai?
-
-Khi tham gia AI20K Build Phase, mỗi đội phải nộp một AI Agent chạy được thật — không chỉ là notebook hay demo. Việc dựng từ con số không (cấu trúc thư mục, Docker, CI, logging, test) thường ngốn cả tuần đầu tiên, trong khi thời gian đó nên dành cho phần nghiệp vụ.
-
-Template này lo sẵn phần khung để bạn bắt đầu ngay từ bài toán của mình.
-
-## 📦 Template cho bạn những gì?
+## 📦 Project Template
 
 | Hạng mục | Nội dung | Trạng thái |
 | --- | --- | --- |
