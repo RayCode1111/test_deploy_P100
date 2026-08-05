@@ -464,10 +464,10 @@ Mô hình dữ liệu cộng dồn theo 3 MVP. **Tên thực thể trong ERD kh�
 
 ```mermaid
 erDiagram
-    %% ===== MVP 1: Ingestion & Data =====
+    %% ===== MVP 1: Ingestion & Core Data =====
     PROJECT ||--o{ AREA : "gồm"
     PROJECT ||--o{ UPLOAD_FILE : "nhận dữ liệu"
-    USER |o--o{ UPLOAD_FILE : "tải lên"
+    USER o|--o{ UPLOAD_FILE : "tải lên"
     UPLOAD_FILE ||--o{ UPLOAD_ERROR : "sinh lỗi validate"
     UPLOAD_FILE ||--o{ SALES_RECORD : "nạp"
     UPLOAD_FILE ||--o{ INVENTORY_SNAPSHOT : "nạp"
@@ -476,10 +476,10 @@ erDiagram
     AREA ||--o{ ABSORPTION_DAILY : "được tính hấp thụ"
 
     %% ===== MVP 2: Forecast & AI =====
-    USER |o--o{ FORECAST_JOB : "kích hoạt"
+    USER o|--o{ FORECAST_JOB : "kích hoạt"
     FORECAST_JOB ||--o{ FORECAST : "sinh ra"
     AREA ||--o{ FORECAST : "được dự báo"
-    UPLOAD_FILE ||--o{ FORECAST : "là dữ liệu nguồn"
+    UPLOAD_FILE ||--o{ FORECAST : "là nguồn chính"
     FORECAST ||--o{ FORECAST_POINT : "gồm chuỗi điểm"
     FORECAST ||--o| EXPLANATION : "kèm giải thích"
     FORECAST ||--o{ ALERT : "sinh cảnh báo"
@@ -492,11 +492,12 @@ erDiagram
     USER ||--o{ USER_AREA : "được gán"
     AREA ||--o{ USER_AREA : "được phân công"
     USER ||--o{ REFRESH_TOKEN : "sở hữu"
+    REFRESH_TOKEN o|--o| REFRESH_TOKEN : "thay thế bởi"
     SUGGESTION ||--o| PROPOSAL : "chuyển thành"
     AREA ||--o{ PROPOSAL : "thuộc về"
     PROPOSAL ||--o| APPROVAL : "được quyết định"
     USER ||--o{ APPROVAL : "thực hiện"
-    USER |o--o{ AUDIT_LOG : "ghi nhận"
+    USER o|--o{ AUDIT_LOG : "ghi nhận"
 
     %% ===== MVP 1 =====
     PROJECT {
@@ -505,15 +506,18 @@ erDiagram
         date launch_date
         timestamp created_at
     }
+
     AREA {
         uuid id PK
         uuid project_id FK
         string area_name
         string unit_type
         int bedrooms
-        float area_sqm
+        numeric area_sqm
         int total_units
+        timestamp created_at
     }
+
     UPLOAD_FILE {
         uuid id PK
         uuid project_id FK
@@ -525,6 +529,7 @@ erDiagram
         int rows_failed
         timestamp uploaded_at
     }
+
     UPLOAD_ERROR {
         uuid id PK
         uuid file_id FK
@@ -532,28 +537,40 @@ erDiagram
         string column_name
         string error_code
         text message
+        timestamp created_at
     }
+
     SALES_RECORD {
         uuid id PK
         uuid area_id FK
         uuid file_id FK
         date sold_date
         int units_sold
+        string external_record_id
+        string source_row_hash
+        timestamp created_at
     }
+
     INVENTORY_SNAPSHOT {
         uuid id PK
         uuid area_id FK
         uuid file_id FK
         date snapshot_date
         int units_remaining
+        string snapshot_type
+        string source_row_hash
+        timestamp created_at
     }
+
     ABSORPTION_DAILY {
         uuid id PK
         uuid area_id FK
         date stat_date
         int units_sold
-        float velocity_7d
-        float velocity_30d
+        numeric velocity_7d
+        numeric velocity_30d
+        string data_quality_status
+        boolean is_observed
         timestamp computed_at
     }
 
@@ -565,32 +582,43 @@ erDiagram
         string trigger_type
         string status
         int areas_total
+        int areas_succeeded
         int areas_failed
+        json error_summary
         timestamp started_at
         timestamp finished_at
     }
+
     FORECAST {
         uuid id PK
         uuid area_id FK
         uuid job_id FK
-        uuid file_id FK
+        uuid file_id FK "primary_source_file_id"
+        date data_cutoff_date
         timestamp run_at
         int horizon_days
-        float velocity_forecast
-        float ci_lower
-        float ci_upper
+        string model_name
+        string model_version
+        string feature_version
+        json parameters
+        numeric velocity_forecast
+        numeric pred_lower
+        numeric pred_upper
+        numeric interval_level
         date sellout_date
         string confidence_label
-        float mape
+        numeric mape
     }
+
     FORECAST_POINT {
         uuid id PK
         uuid forecast_id FK
         date ds
-        float yhat
-        float yhat_lower
-        float yhat_upper
+        numeric yhat
+        numeric yhat_lower
+        numeric yhat_upper
     }
+
     EXPLANATION {
         uuid id PK
         uuid forecast_id FK,UK
@@ -598,8 +626,10 @@ erDiagram
         json key_factors
         json assumptions
         string model_name
+        string prompt_template_version
         timestamp generated_at
     }
+
     ALERT {
         uuid id PK
         uuid forecast_id FK
@@ -612,6 +642,7 @@ erDiagram
         timestamp created_at
         timestamp closed_at
     }
+
     SUGGESTION {
         uuid id PK
         uuid forecast_id FK
@@ -621,16 +652,23 @@ erDiagram
         text rationale
         timestamp created_at
     }
+
     LLM_CALL {
         uuid id PK
         uuid forecast_id FK
+        string provider
         string model_name
+        string prompt_template_version
         int prompt_tokens
         int completion_tokens
         int latency_ms
+        numeric cost_amount
         string status
+        string error_code
+        int retry_count
         timestamp called_at
     }
+
     SETTING {
         string key PK
         json value
@@ -648,11 +686,13 @@ erDiagram
         boolean is_active
         timestamp created_at
     }
+
     USER_AREA {
         uuid user_id PK,FK
         uuid area_id PK,FK
         timestamp assigned_at
     }
+
     REFRESH_TOKEN {
         uuid id PK
         uuid user_id FK
@@ -660,7 +700,9 @@ erDiagram
         timestamp expires_at
         timestamp revoked_at
         uuid replaced_by FK
+        timestamp created_at
     }
+
     PROPOSAL {
         uuid id PK
         uuid suggestion_id FK,UK
@@ -670,6 +712,7 @@ erDiagram
         timestamp created_at
         timestamp closed_at
     }
+
     APPROVAL {
         uuid id PK
         uuid proposal_id FK,UK
@@ -678,6 +721,7 @@ erDiagram
         text reason
         timestamp decided_at
     }
+
     AUDIT_LOG {
         uuid id PK
         uuid user_id FK "NULL khi hệ thống thực hiện"
@@ -685,6 +729,7 @@ erDiagram
         string action
         string entity_type
         uuid entity_id
+        string entity_key
         json payload
         string ip_address
         string user_agent
@@ -692,17 +737,139 @@ erDiagram
     }
 ```
 
-**Ghi chú mô hình**
+### 5.7 Ghi chú mô hình dữ liệu
 
-- **Chuỗi truy vết (SRS §7.2 · NFR-L2):** `APPROVAL → PROPOSAL → SUGGESTION → FORECAST → UPLOAD_FILE`. Cột `forecasts.file_id` (NOT NULL) là mắt xích bắt buộc — từ một quyết định phê duyệt luôn truy ngược được về lô dữ liệu đầu vào đã sinh ra dự báo.
-- `USER_AREA` dùng khoá chính tổ hợp `(user_id, area_id)`, cả hai cột đồng thời là khoá ngoại `ON DELETE CASCADE`; đây là phạm vi dữ liệu mà `RBACGuard` áp cho vai trò `sales_staff`.
-- **Optionality:** `UPLOAD_FILE.uploaded_by` NULL ở MVP 1 (chưa có bảng `users`), `FORECAST_JOB.triggered_by` NULL khi job chạy theo lịch 02:00, `AUDIT_LOG.user_id` NULL khi hành động do hệ thống thực hiện — nên ba quan hệ này vẽ `|o--o{`, không phải `||--o{`.
-- `SUGGESTION → PROPOSAL` và `PROPOSAL → APPROVAL` là 1–0..1, được ép ở tầng DB bằng UNIQUE trên `proposals(suggestion_id)` và `approvals(proposal_id)`; `EXPLANATION` tương tự với UNIQUE `explanations(forecast_id)`.
-- `PROPOSAL → APPROVAL` 1–0..1 khớp `ProposalWorkflowService`: trạng thái chuyển một chiều `pending → approved | rejected`, chặn duyệt lại đề xuất đã đóng. Lịch sử thao tác giữ ở `AUDIT_LOG`, không nhân bản trong `APPROVAL`.
-- `SETTING` là bảng cấu hình toàn cục theo `key` (ví dụ ngưỡng ngày cảnh báo), không thuộc sở hữu của người dùng nào; `updated_by` chỉ là metadata ghi ai sửa lần cuối nên **không** gắn nhãn FK và không vẽ thành cạnh quan hệ.
-- `AUDIT_LOG` là bảng **append-only đa hình**: khoá ngoại duy nhất là `USER`; thực thể bị tác động trỏ mềm qua `(entity_type, entity_id)` — dùng chung cho `PROPOSAL`, `FORECAST`, `UPLOAD_FILE`, `SETTING`. Vì vậy sơ đồ không vẽ cạnh FK từ `PROPOSAL` sang `AUDIT_LOG`.
-- `ALERT.area_id`, `SUGGESTION.area_id`, `PROPOSAL.area_id` là **denormalize có chủ đích** để lọc theo phân khu cho RBAC mà không phải join qua `FORECAST`; giá trị suy ra từ `forecasts.area_id`.
-- `FORECAST.mape` chỉ có giá trị sau khi đánh giá trên tập kiểm chứng; `NULL` ở các dự báo chưa được chấm điểm.
+Phần này diễn giải sơ đồ ở 5.6. **Sơ đồ 5.6 là nguồn sự thật**; mọi khẳng định dưới đây đều đọc trực tiếp từ sơ đồ. Những gì sơ đồ không thể hiện được liệt kê riêng ở cuối.
+
+#### 5.7.1 Quan hệ & cardinality
+
+29 quan hệ, ký hiệu Mermaid đọc theo dạng `trái → phải`.
+
+| Thực thể cha | Ký hiệu | Thực thể con | Cardinality | Ý nghĩa |
+| --- | --- | --- | --- | --- |
+| `PROJECT` | `\|\|--o{` | `AREA` | 1 → 0..N | gồm |
+| `PROJECT` | `\|\|--o{` | `UPLOAD_FILE` | 1 → 0..N | nhận dữ liệu |
+| `USER` | `o\|--o{` | `UPLOAD_FILE` | 0..1 → 0..N | tải lên |
+| `UPLOAD_FILE` | `\|\|--o{` | `UPLOAD_ERROR` | 1 → 0..N | sinh lỗi validate |
+| `UPLOAD_FILE` | `\|\|--o{` | `SALES_RECORD` | 1 → 0..N | nạp |
+| `UPLOAD_FILE` | `\|\|--o{` | `INVENTORY_SNAPSHOT` | 1 → 0..N | nạp |
+| `AREA` | `\|\|--o{` | `SALES_RECORD` | 1 → 0..N | ghi nhận bán |
+| `AREA` | `\|\|--o{` | `INVENTORY_SNAPSHOT` | 1 → 0..N | có tồn kho |
+| `AREA` | `\|\|--o{` | `ABSORPTION_DAILY` | 1 → 0..N | được tính hấp thụ |
+| `USER` | `o\|--o{` | `FORECAST_JOB` | 0..1 → 0..N | kích hoạt |
+| `FORECAST_JOB` | `\|\|--o{` | `FORECAST` | 1 → 0..N | sinh ra |
+| `AREA` | `\|\|--o{` | `FORECAST` | 1 → 0..N | được dự báo |
+| `UPLOAD_FILE` | `\|\|--o{` | `FORECAST` | 1 → 0..N | là nguồn chính |
+| `FORECAST` | `\|\|--o{` | `FORECAST_POINT` | 1 → 0..N | gồm chuỗi điểm |
+| `FORECAST` | `\|\|--o\|` | `EXPLANATION` | 1 → 0..1 | kèm giải thích |
+| `FORECAST` | `\|\|--o{` | `ALERT` | 1 → 0..N | sinh cảnh báo |
+| `FORECAST` | `\|\|--o{` | `SUGGESTION` | 1 → 0..N | dẫn tới đề xuất |
+| `FORECAST` | `\|\|--o{` | `LLM_CALL` | 1 → 0..N | ghi nhận lượt gọi |
+| `AREA` | `\|\|--o{` | `ALERT` | 1 → 0..N | thuộc về |
+| `AREA` | `\|\|--o{` | `SUGGESTION` | 1 → 0..N | thuộc về |
+| `USER` | `\|\|--o{` | `USER_AREA` | 1 → 0..N | được gán |
+| `AREA` | `\|\|--o{` | `USER_AREA` | 1 → 0..N | được phân công |
+| `USER` | `\|\|--o{` | `REFRESH_TOKEN` | 1 → 0..N | sở hữu |
+| `REFRESH_TOKEN` | `o\|--o\|` | `REFRESH_TOKEN` | 0..1 → 0..1 | thay thế bởi (tự tham chiếu) |
+| `SUGGESTION` | `\|\|--o\|` | `PROPOSAL` | 1 → 0..1 | chuyển thành |
+| `AREA` | `\|\|--o{` | `PROPOSAL` | 1 → 0..N | thuộc về |
+| `PROPOSAL` | `\|\|--o\|` | `APPROVAL` | 1 → 0..1 | được quyết định |
+| `USER` | `\|\|--o{` | `APPROVAL` | 1 → 0..N | thực hiện |
+| `USER` | `o\|--o{` | `AUDIT_LOG` | 0..1 → 0..N | ghi nhận |
+
+`USER_AREA` là bảng nối hiện thực quan hệ **N–N** giữa `USER` và `AREA` — đây là phạm vi dữ liệu mà `RBACGuard` áp cho vai trò `sales_staff`. Không có quan hệ N–N nào khác trong mô hình.
+
+#### 5.7.2 Khoá chính
+
+- **21/21 thực thể đều có khoá chính.** 19 thực thể dùng `uuid id`.
+- `USER_AREA` dùng **khoá chính tổ hợp** `(user_id, area_id)`; cả hai cột đồng thời là khoá ngoại.
+- `SETTING` dùng `string key` làm khoá chính, không dùng surrogate id.
+
+#### 5.7.3 Khoá ngoại
+
+| Thực thể | Cột khoá ngoại |
+| --- | --- |
+| `AREA` | `project_id` |
+| `UPLOAD_FILE` | `project_id`, `uploaded_by` |
+| `UPLOAD_ERROR` | `file_id` |
+| `SALES_RECORD` | `area_id`, `file_id` |
+| `INVENTORY_SNAPSHOT` | `area_id`, `file_id` |
+| `ABSORPTION_DAILY` | `area_id` |
+| `FORECAST_JOB` | `project_id`, `triggered_by` |
+| `FORECAST` | `area_id`, `job_id`, `file_id` |
+| `FORECAST_POINT` | `forecast_id` |
+| `EXPLANATION` | `forecast_id` |
+| `ALERT` | `forecast_id`, `area_id` |
+| `SUGGESTION` | `forecast_id`, `area_id` |
+| `LLM_CALL` | `forecast_id` |
+| `USER_AREA` | `user_id`, `area_id` |
+| `REFRESH_TOKEN` | `user_id`, `replaced_by` |
+| `PROPOSAL` | `suggestion_id`, `area_id` |
+| `APPROVAL` | `proposal_id`, `user_id` |
+| `AUDIT_LOG` | `user_id` |
+
+`PROJECT`, `USER`, `SETTING` không có khoá ngoại — là ba gốc của mô hình.
+
+#### 5.7.4 UNIQUE
+
+| Thực thể | Cột | Mục đích |
+| --- | --- | --- |
+| `UPLOAD_FILE` | `checksum` | Chặn upload trùng file |
+| `USER` | `email` | Định danh đăng nhập |
+| `REFRESH_TOKEN` | `token_hash` | Mỗi token là duy nhất |
+| `EXPLANATION` | `forecast_id` | Ép quan hệ 1–0..1 với `FORECAST` |
+| `PROPOSAL` | `suggestion_id` | Ép quan hệ 1–0..1 với `SUGGESTION` |
+| `APPROVAL` | `proposal_id` | Ép quan hệ 1–0..1 với `PROPOSAL` |
+
+Ba UNIQUE cuối là cơ chế duy nhất khiến các quan hệ 0..1 được bảo đảm ở tầng dữ liệu, không chỉ ở hình vẽ.
+
+#### 5.7.5 Cột cho phép NULL
+
+Sơ đồ chỉ đánh dấu tường minh ba cột. Mọi cột khác mặc định hiểu là NOT NULL.
+
+| Cột | Điều kiện NULL |
+| --- | --- |
+| `UPLOAD_FILE.uploaded_by` | MVP 1 chưa có bảng `users` nên chưa có người tải lên để tham chiếu |
+| `FORECAST_JOB.triggered_by` | Job chạy theo lịch 02:00 không có người kích hoạt |
+| `AUDIT_LOG.user_id` | Hành động do hệ thống thực hiện, không có actor là người |
+
+Ba cột này chính là lý do các quan hệ tương ứng vẽ `o|--o{` (0..1 → 0..N) thay vì `||--o{`.
+
+#### 5.7.6 Kiểu dữ liệu
+
+Sơ đồ dùng 9 kiểu ở mức khái niệm: `uuid`, `string`, `text`, `int`, `numeric`, `boolean`, `date`, `timestamp`, `json`. Kiểu của từng cột đọc trực tiếp trên sơ đồ 5.6.
+
+- `numeric` dùng cho số liệu dự báo và tốc độ hấp thụ — chọn số thập phân chính xác thay vì dấu phẩy động.
+- `json` dùng cho `EXPLANATION.key_factors`, `EXPLANATION.assumptions`, `SETTING.value`, `AUDIT_LOG.payload`.
+- `date` cho mốc ngày nghiệp vụ (`sold_date`, `snapshot_date`, `stat_date`, `sellout_date`, `ds`, `launch_date`); `timestamp` cho mốc thời điểm hệ thống.
+
+#### 5.7.7 Quy tắc nghiệp vụ đọc được từ sơ đồ
+
+- **Chuỗi truy vết** `APPROVAL → PROPOSAL → SUGGESTION → FORECAST → UPLOAD_FILE`: `FORECAST.file_id` là mắt xích bắt buộc, nên từ một quyết định phê duyệt luôn truy ngược được về lô dữ liệu đầu vào đã sinh ra dự báo (SRS §7.2 · NFR-L2).
+- **Mỗi đề xuất có tối đa một quyết định cuối cùng** — `PROPOSAL ||--o| APPROVAL`. Khớp `ProposalWorkflowService`: trạng thái chuyển một chiều `pending → approved | rejected`, chặn duyệt lại đề xuất đã đóng. Lịch sử thao tác giữ ở `AUDIT_LOG`, không nhân bản trong `APPROVAL`.
+- **Đề xuất của MVP 2 chỉ trở thành đối tượng phê duyệt khi vào luồng HITL của MVP 3** — `SUGGESTION ||--o| PROPOSAL` cho phép `SUGGESTION` tồn tại mà chưa có `PROPOSAL`.
+- **`SETTING` là cấu hình toàn cục**, khoá theo `key`, không thuộc sở hữu người dùng nào. `updated_by` **không** mang nhãn FK và không có cạnh quan hệ — chỉ là metadata ghi ai sửa lần cuối.
+- **`AUDIT_LOG` là bảng đa hình**: khoá ngoại duy nhất là `USER`; thực thể bị tác động trỏ mềm qua cặp `(entity_type, entity_id)`, nên sơ đồ không vẽ cạnh từ `PROPOSAL` hay `FORECAST` sang `AUDIT_LOG`.
+- **`ALERT.area_id`, `SUGGESTION.area_id`, `PROPOSAL.area_id` là denormalize có chủ đích** — cả ba đều có đồng thời cạnh từ `AREA` và từ `FORECAST`/`SUGGESTION`, cho phép lọc theo phân khu phục vụ RBAC mà không phải join ngược qua `FORECAST`.
+- **`REFRESH_TOKEN` tự tham chiếu** qua `replaced_by` — phục vụ cơ chế JWT rotation, lần refresh sau trỏ về token bị thay thế.
+
+#### 5.7.8 Những gì sơ đồ 5.6 không thể hiện
+
+Các mục dưới đây **không đọc được từ ERD**, xem đặc tả tương ứng ở 5.2–5.4 hoặc chốt khi viết migration:
+
+| Hạng mục | Nơi tra cứu |
+| --- | --- |
+| Index (kể cả partial index) | Danh sách *Indexes* ở 5.2, 5.3, 5.4 |
+| Hành vi `ON DELETE` / `ON UPDATE` của khoá ngoại | Chưa đặc tả — quyết định khi viết migration |
+| Tập giá trị hợp lệ của `status`, `role`, `decision`, `action_type`, `risk_level`, `trigger_type`, `severity`, `confidence_label`, `alert_type` | 5.2–5.4 nêu một phần; phần còn lại chưa đặc tả |
+| Giá trị hợp lệ của `AUDIT_LOG.entity_type` | Chưa đặc tả |
+| Độ dài `varchar`, độ chính xác `numeric(p,s)`, `json` hay `jsonb` | Chưa đặc tả |
+| Cột nào NULL ngoài ba cột ở 5.7.5 — ví dụ `FORECAST.mape` chỉ có giá trị sau khi chấm điểm | Chưa đặc tả trong ERD |
+| Chính sách lưu trữ / xoá dữ liệu | Chưa đặc tả |
+
+#### 5.7.9 Mâu thuẫn còn tồn đọng
+
+- **`FORECAST_JOB.project_id` mang nhãn FK nhưng sơ đồ không vẽ cạnh `PROJECT → FORECAST_JOB`.** Mọi khoá ngoại khác đều có cạnh tương ứng. Cần bổ sung cạnh vào sơ đồ, hoặc bỏ nhãn FK nếu cột này không thực sự tham chiếu `PROJECT`. **Chưa xử lý vì phần này chỉ cập nhật ghi chú, không sửa sơ đồ.**
 
 ---
 
