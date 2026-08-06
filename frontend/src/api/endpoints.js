@@ -50,3 +50,12 @@ export const fileErrors = (id) => api.get(`/files/${id}/errors`);
  *  forceReal: true vì endpoint này backend đã chạy thật, không cần mock. */
 export const chatWithAgent = (message) =>
   api.post("/v1/chat", { message }, { forceReal: true });
+
+// ---------- Chọn ngữ cảnh nạp dữ liệu: Dự án → Phân khu ----------
+/** Danh sách dự án của chủ đầu tư.
+ *  -> [{ id, name, location, zone_count, total_units, sold_pct, status }] */
+export const listProjects = () => api.get("/projects");
+
+/** Các phân khu trong 1 dự án.
+ *  -> [{ id, name, total_units, units_remaining, status }] */
+export const listProjectZones = (projectId) => api.get(`/projects/${projectId}/zones`);

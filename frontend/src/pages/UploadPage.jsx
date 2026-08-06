@@ -4,18 +4,22 @@
 // SRS §5.2 real-time: polling GET /api/files/{id}/status mỗi 3 GIÂY,
 // dừng khi status = done/failed hoặc sau 2 PHÚT timeout.
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useLocation, useNavigate, Navigate } from "react-router-dom";
 import { uploadFile, fileStatus, fileErrors, listFiles } from "../api/endpoints";
 import UploadDropzone from "../components/UploadDropzone";
 import FileStatusTable from "../components/FileStatusTable";
 import ValidationErrorPanel from "../components/ValidationErrorPanel";
 import { color, size, radius, space, layout } from "../styles/tokens";
-import { useBreakpoint, pick } from "../hooks/useBreakpoint";
 
 const POLL_MS = 3_000;
 const TIMEOUT_MS = 120_000;
 
 export default function UploadPage() {
-  const { bp } = useBreakpoint();
+  const navigate = useNavigate();
+  const { state } = useLocation();
+  const project = state?.project;
+  const zone = state?.zone;
+
   const [files, setFiles] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -116,13 +120,27 @@ export default function UploadPage() {
     }
   }
 
+  // Chặn vào thẳng /import/upload khi chưa chọn dự án/phân khu.
+  // ĐẶT SAU TẤT CẢ HOOK (rules of hooks: không return sớm trước hook nào).
+  if (!project || !zone) return <Navigate to="/import" replace />;
+
   return (
-    <div style={{ ...S.wrap, padding: `${space(7)}px ${pick(bp, layout.gutter)}px ${space(16)}px` }}>
+    <div style={S.wrap}>
+      {/* breadcrumb ngữ cảnh đã chọn */}
+      <button style={S.breadcrumb} onClick={() => navigate("/import")}>
+        <span style={S.crumbLink}>Dự án</span>
+        <span style={S.crumbSep}>/</span>
+        <span style={S.crumbCur}>{project.name}</span>
+        <span style={S.crumbSep}>/</span>
+        <span style={S.crumbCur}>{zone.name}</span>
+        <span style={S.crumbChange}>Đổi</span>
+      </button>
+
       <header style={S.head}>
         <h1 style={S.h1}>Nạp dữ liệu</h1>
         <p style={S.sub}>
-          Tải file bán hàng &amp; tồn kho theo template. Hệ thống kiểm tra từng dòng
-          trước khi ghi vào cơ sở dữ liệu.
+          Tải file bán hàng &amp; tồn kho cho <b>{project.name} · {zone.name}</b>.
+          Hệ thống kiểm tra từng dòng trước khi ghi vào cơ sở dữ liệu.
         </p>
       </header>
 
@@ -171,7 +189,18 @@ function noticeStyle(type) {
 }
 
 const S = {
-  wrap: { maxWidth: layout.maxWidth, margin: "0 auto", padding: `${space(7)}px ${layout.gutter}px ${space(16)}px` },
+  wrap: { maxWidth: layout.maxWidth, margin: "0 auto", padding: `${space(7)}px ${space(6)}px ${space(16)}px` },
+  breadcrumb: {
+    display: "flex", alignItems: "center", gap: space(2), background: "transparent",
+    border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, marginBottom: space(4),
+  },
+  crumbLink: { fontSize: size.small, color: color.accent, fontWeight: 600 },
+  crumbCur: { fontSize: size.small, color: color.ink, fontWeight: 600 },
+  crumbSep: { fontSize: size.small, color: color.muted },
+  crumbChange: {
+    fontSize: size.tiny, color: color.accent, border: `1px solid ${color.accent}`,
+    borderRadius: radius.pill, padding: "2px 10px", marginLeft: space(2),
+  },
   head: { marginBottom: space(6) },
   h1: { fontSize: size.h1, fontWeight: 700, color: color.ink, margin: 0, letterSpacing: "-.01em" },
   sub: { fontSize: size.small, color: color.muted, margin: "4px 0 0", maxWidth: "64ch" },

@@ -6,6 +6,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import DashboardPage from "./pages/DashboardPage";
 import UploadPage from "./pages/UploadPage";
+import ImportSelectPage from "./pages/ImportSelectPage";
 import AuthButtons from "./components/AuthButtons";
 import ChatWidget from "./components/ChatWidget";
 import { USE_MOCK } from "./api/client";
@@ -15,7 +16,7 @@ import { useBreakpoint, pick } from "./hooks/useBreakpoint";
 // Các mục điều hướng. `soon: true` = chưa làm, hiện mờ để cả nhóm thấy lộ trình.
 const NAV = [
   { to: "/dashboard", label: "Hấp thụ" },
-  { to: "/upload",    label: "Nạp dữ liệu" },
+  { to: "/import",    label: "Nạp dữ liệu" },
   { to: "/forecasts", label: "Dự báo",      soon: true },
   { to: "/alerts",    label: "Cảnh báo",    soon: true },
   { to: "/proposals", label: "Duyệt đề xuất", soon: true },
@@ -34,7 +35,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/import" element={<ImportSelectPage />} />
+            <Route path="/import/upload" element={<UploadPage />} />
             <Route path="*" element={<NotReady />} />
           </Routes>
         </main>
