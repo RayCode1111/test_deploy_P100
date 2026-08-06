@@ -10,6 +10,35 @@
 
 const delay = (ms = 350) => new Promise((r) => setTimeout(r, ms));
 
+// ---------------------------------------------------------------------------
+// DỰ ÁN và PHÂN KHU (cho luồng chọn ngữ cảnh trước khi nạp dữ liệu)
+// Một chủ đầu tư có nhiều dự án; mỗi dự án có nhiều phân khu.
+// ---------------------------------------------------------------------------
+const PROJECTS = [
+  { id: "p1", name: "Vinhomes Ocean Park", location: "Gia Lâm, Hà Nội", zone_count: 6, total_units: 1200, sold_pct: 58, status: "active" },
+  { id: "p2", name: "Masteri Waterfront",  location: "Gia Lâm, Hà Nội", zone_count: 4, total_units: 800,  sold_pct: 72, status: "active" },
+  { id: "p3", name: "Vinhomes Smart City", location: "Nam Từ Liêm, Hà Nội", zone_count: 8, total_units: 2000, sold_pct: 41, status: "active" },
+];
+
+const ZONES = {
+  p1: [
+    { id: "p1z1", name: "Phân khu S1", total_units: 320, units_remaining: 96,  status: "hot" },
+    { id: "p1z2", name: "Phân khu S2", total_units: 280, units_remaining: 150, status: "normal" },
+    { id: "p1z3", name: "Phân khu The Zurich", total_units: 240, units_remaining: 38, status: "hot" },
+    { id: "p1z4", name: "Phân khu San Hô", total_units: 360, units_remaining: 220, status: "slow" },
+  ],
+  p2: [
+    { id: "p2z1", name: "Toà M1", total_units: 200, units_remaining: 40, status: "hot" },
+    { id: "p2z2", name: "Toà M2", total_units: 200, units_remaining: 132, status: "slow" },
+    { id: "p2z3", name: "Toà M3", total_units: 200, units_remaining: 60, status: "normal" },
+  ],
+  p3: [
+    { id: "p3z1", name: "Phân khu Sapphire", total_units: 500, units_remaining: 210, status: "normal" },
+    { id: "p3z2", name: "Phân khu Ruby", total_units: 480, units_remaining: 300, status: "slow" },
+    { id: "p3z3", name: "Phân khu The Miami", total_units: 520, units_remaining: 120, status: "hot" },
+  ],
+};
+
 // ---- Dữ liệu phân khu mẫu: 1 bán chạy / 1 bán chậm / 1 nhiễu
 const AREAS = [
   { id: "a1", area_name: "Phân khu A", unit_type: "2PN", bedrooms: 2, area_sqm: 61, total_units: 120, units_remaining: 34 },
@@ -70,6 +99,14 @@ function computeFileState(f) {
 
 // ---------------------------------------------------------------------------
 const routes = [
+  { match: (p) => p === "/projects", handler: () => PROJECTS },
+  {
+    match: (p) => /^\/projects\/[^/]+\/zones$/.test(p),
+    handler: (path) => {
+      const pid = path.split("/")[2];
+      return ZONES[pid] || [];
+    },
+  },
   { match: (p) => p === "/areas", handler: () => AREAS },
 
   {
