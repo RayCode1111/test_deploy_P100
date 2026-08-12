@@ -13,6 +13,9 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AppLayout from "./components/AppLayout";
 import DashboardPage from "./pages/DashboardPage";
+import InventoryPage from "./pages/InventoryPage";
+import AgentPage from "./pages/AgentPage";
+import AuditPage from "./pages/AuditPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import AreaDetailPage from "./pages/AreaDetailPage";
@@ -31,6 +34,9 @@ export default function App() {
         {/* Có khung app (topbar + chat) */}
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/ai-agent" element={<AgentPage />} />
+          <Route path="/audit" element={<AuditPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/projects/:id/areas/:areaId" element={<AreaDetailPage />} />

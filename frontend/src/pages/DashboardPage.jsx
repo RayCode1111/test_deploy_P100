@@ -1,9 +1,9 @@
 // frontend/src/pages/DashboardPage.jsx
-// Trang /dashboard — Dashboard hấp thụ độc lập, có bộ chọn dự án.
-// Chỉ là lớp mỏng; nội dung nằm trong <AbsorptionDashboard/> (tái dùng cho S03).
+// Trang /dashboard — prototype điều hành mở bán theo đặc tả BĐS AI Agent.
+// Dashboard cũ vẫn được giữ nguyên trong components/dashboard để đối chiếu.
 import React from "react";
-import AbsorptionDashboard from "../components/dashboard/AbsorptionDashboard";
+import MarketPrototypePage from "./MarketPrototypePage";
 
 export default function DashboardPage() {
-  return <AbsorptionDashboard showProjectSelector showHeader />;
+  return <MarketPrototypePage view="home" />;
 }

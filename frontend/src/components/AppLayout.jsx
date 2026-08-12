@@ -4,13 +4,15 @@
 import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import Brand from "./Brand";
-import ChatWidget from "./ChatWidget";
 import { USE_MOCK } from "../api/client";
 import { color, size, radius, space, font, layout } from "../styles/tokens";
 import { useBreakpoint, pick } from "../hooks/useBreakpoint";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/inventory", label: "Giỏ hàng" },
+  { to: "/ai-agent", label: "AI Agent" },
+  { to: "/audit", label: "Nhật ký" },
   { to: "/projects", label: "Dự án" },
   { to: "/import", label: "Nạp dữ liệu" },
 ];
@@ -52,7 +54,6 @@ export default function AppLayout() {
         </div>
       </main>
 
-      <ChatWidget />
     </div>
   );
 }
