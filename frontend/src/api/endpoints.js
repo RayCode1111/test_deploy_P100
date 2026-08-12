@@ -59,3 +59,41 @@ export const listProjects = () => api.get("/projects");
 /** Các phân khu trong 1 dự án.
  *  -> [{ id, name, total_units, units_remaining, status }] */
 export const listProjectZones = (projectId) => api.get(`/projects/${projectId}/zones`);
+
+// ---------- Absorption Dashboard (MVP1) ----------
+/** KPI tổng hợp -> { total_units, units_sold, remaining_units, absorption_rate, avg_velocity, updated_at } */
+export const getDashboardSummary = ({ projectId, areaId, from, to } = {}) => {
+  const q = new URLSearchParams();
+  if (projectId) q.set("project_id", projectId);
+  if (areaId) q.set("area_id", areaId);
+  if (from) q.set("from", from);
+  if (to) q.set("to", to);
+  return api.get(`/dashboard/summary?${q}`);
+};
+
+/** Chuỗi trend 3 series -> [{ date, units_sold, cumulative_sold, absorption_rate }] */
+export const getDashboardTrend = ({ projectId, areaId, from, to } = {}) => {
+  const q = new URLSearchParams();
+  if (projectId) q.set("project_id", projectId);
+  if (areaId) q.set("area_id", areaId);
+  if (from) q.set("from", from);
+  if (to) q.set("to", to);
+  return api.get(`/dashboard/trend?${q}`);
+};
+
+/** So sánh + bảng chi tiết area -> [{ id, name, total_units, sold, remaining, absorption_rate, velocity, latest_data, status }] */
+export const getDashboardAreas = ({ projectId } = {}) =>
+  api.get(`/dashboard/areas${projectId ? `?project_id=${projectId}` : ""}`);
+
+/** Chất lượng dữ liệu -> { latest_data, source, date_range, error_records, status, warnings } */
+export const getDataQuality = ({ projectId } = {}) =>
+  api.get(`/dashboard/data-quality${projectId ? `?project_id=${projectId}` : ""}`);
+
+// ---------- Chi tiết dự án + Xếp hạng khả năng bán ----------
+/** Thông tin 1 dự án -> { id, name, location, zone_count, total_units, sold_pct, status, launch_date } */
+export const getProject = (projectId) => api.get(`/projects/${projectId}`);
+
+/** Xếp hạng khả năng bán từng căn trong 1 phân khu (bài toán lõi).
+ *  -> [{ unit_code, unit_type, area_sqm, score, band }]  band ∈ high|medium|low
+ *  AI: thay bằng model thật; frontend chỉ hiển thị score + band. */
+export const getUnitRanking = (areaId) => api.get(`/areas/${areaId}/ranking`);

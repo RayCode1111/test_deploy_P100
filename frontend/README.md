@@ -1,205 +1,159 @@
-# Frontend — AbsorptionForecast AI Agent
+# Frontend — AbsorbIQ AI (MVP1)
 
-React 18 + Vite 6 + React Router + Recharts.
-Giao diện cho ban kinh doanh theo dõi tốc độ hấp thụ, nạp dữ liệu, và (sắp tới)
-xem dự báo & duyệt đề xuất.
+React 18 + Vite 6 + React Router + Recharts. Giao diện xếp hạng khả năng bán
+căn hộ + theo dõi tốc độ hấp thụ, cho đội ngũ kinh doanh & ban lãnh đạo.
 
-**Trạng thái:** MVP1 hoàn thành. Đang chạy trên mock, sẵn sàng nối backend thật.
+**Trạng thái:** MVP1 hoàn thành, đang chạy trên **mock**, sẵn sàng nối backend thật.
 
 ---
 
-## 1. Chạy nhanh
+## 1. Chạy
 
 ```bash
-docker compose up -d          # từ thư mục gốc repo
-# http://localhost:5173       -> frontend
-# http://localhost:8000/docs  -> Swagger (đối chiếu field ở đây)
+docker compose up -d --build      # cả stack
+# http://localhost:5173           frontend
+# http://localhost:8000/docs      Swagger (đối chiếu field ở đây)
 ```
+Vite proxy sẵn `/api` và `/ws` → `api:8000`. Trong code chỉ dùng `/api/...`, không hardcode host.
 
-Sau khi cài thư viện mới:
-```bash
-docker compose up -d --build frontend
+**Cần thêm vào `frontend/index.html`** (nhận diện AbsorbIQ dùng 2 font):
+```html
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 ```
-
-Vite đã proxy `/api` và `/ws` sang `api:8000` (xem `vite.config.js`).
-Trong code **chỉ dùng đường dẫn tương đối** `/api/...`, không hardcode host.
 
 ---
 
-## 2. Đã làm gì (MVP1)
+## 2. Các màn & route
 
-| Màn | Route | User Story | Thành phần |
-|---|---|---|---|
-| Dashboard hấp thụ | `/dashboard` | US-003 | `AreaSelector`, `SummaryCards`, `AbsorptionChart` |
-| Nạp dữ liệu | `/upload` | — | `UploadDropzone`, `FileStatusTable`, `ValidationErrorPanel` |
-| Chat AI (toàn cục) | — | — | `ChatWidget` → gọi **API thật** `/api/v1/chat` |
-| Đăng nhập/Đăng ký | — | — | `AuthButtons` (giao diện; auth thật ở MVP3) |
-
-Đã có: responsive (mobile → desktop), polling theo SRS, xử lý lỗi, trạng thái tải.
-
-**Chưa làm:** MVP2 (forecast, cảnh báo, WebSocket) · MVP3 (auth thật, HITL, RBAC).
-
----
-
-## 3. ⚠️ QUAN TRỌNG CHO BACKEND — Hợp đồng API
-
-Frontend đang gọi các endpoint dưới đây với **đúng tên field này**.
-Nếu backend đặt tên khác, báo lại để sửa `src/api/endpoints.js` (một chỗ duy nhất).
-
-### 3.1 Đang dùng (MVP1)
-
-```
-GET  /api/areas
-→ [{ id, area_name, unit_type, bedrooms, area_sqm, total_units, units_remaining }]
-
-GET  /api/absorption?area_id=&from=&to=&granularity=day
-→ [{ stat_date, units_sold, velocity_7d, velocity_30d }]
-
-GET  /api/absorption/summary
-→ { units_remaining, units_sold, avg_velocity_30d, updated_at }
-
-POST /api/files/upload        (multipart, field name = "file")
-→ { file_id, status }
-→ 409 nếu trùng checksum
-
-GET  /api/files
-→ [{ id, filename, status, rows_ok, rows_failed, uploaded_at }]
-     status ∈ pending | parsing | done | failed
-
-GET  /api/files/{id}/status
-→ { status, rows_ok, rows_failed }
-
-GET  /api/files/{id}/errors
-→ [{ row_number, column_name, error_code, message }]
-```
-
-### 3.2 Đã nối sẵn, dùng API thật
-
-```
-POST /api/v1/chat   body { message }  → { response, analysis }
-```
-`ChatWidget` gọi endpoint này bằng cờ `forceReal` — hoạt động ngay cả khi phần
-còn lại đang chạy mock.
-
-### 3.3 Sẽ cần ở MVP2 / MVP3
-
-Đã khai báo sẵn trong `endpoints.js`, chờ backend:
-
-```
-POST /api/forecasts/run              → 409 nếu đã chạy trong ngày
-GET  /api/forecasts?area_id=
-→ { velocity_forecast, ci_lower, ci_upper, sellout_date, confidence_label }
-GET  /api/forecasts/{id}             → + points: [{ ds, yhat, yhat_lower, yhat_upper }]
-GET  /api/forecasts/{id}/explanation → { content_vi, key_factors, assumptions, model_name }
-GET  /api/forecasts/metrics          → [{ area_id, mape }]
-GET  /api/alerts?area_id=&severity=
-GET  /api/suggestions
-GET  /api/settings/alert-threshold · PUT
-POST /api/auth/login · refresh · logout · GET /api/auth/me
-GET  /api/proposals · GET /api/proposals/{id}
-POST /api/proposals/{id}/approve · /reject   (reject BẮT BUỘC có reason)
-GET  /api/audit-logs
-WS   /ws/forecast-jobs · /ws/proposals
-```
-
-### 3.4 Vài điểm cần thống nhất
-
-| Vấn đề | Frontend đang giả định |
-|---|---|
-| `sellout_date` khi velocity ≈ 0 | Có thể `null` → UI hiện "Chưa xác định" |
-| Định dạng ngày | ISO `YYYY-MM-DD` |
-| Cấu trúc lỗi | Đọc được cả `{detail}` lẫn `{message}` |
-| Upload trùng file | HTTP 409 |
-| Access token | Trả trong body, frontend giữ **trong bộ nhớ** (không localStorage) — NFR-S11 |
+| Route | Màn | Ghi chú |
+|---|---|---|
+| `/` | S00 Trang chủ (chưa đăng nhập) | landing, không lộ dữ liệu |
+| `/login` `/register` | S01 Đăng nhập | auth thật ở MVP3 |
+| `/dashboard` | Dashboard hấp thụ | có bộ chọn dự án |
+| `/projects` | S02 Danh sách dự án | lưới thẻ, lọc, tìm |
+| `/projects/:id` | S03 Chi tiết dự án | **nhúng Dashboard** khoá theo dự án |
+| `/projects/:id/areas/:areaId` | S04 Chi tiết phân khu | tab **Xếp hạng khả năng bán** (lõi) |
+| `/import` → `/import/upload` | S05 Nạp dữ liệu | chọn dự án→phân khu rồi upload |
 
 ---
 
-## 4. Cách bật backend thật
+## 3. ⚠️ HỢP ĐỒNG API — cho Backend & AI
 
-Frontend đang chạy trên mock (`src/api/mock.js`). Có 2 cách chuyển:
+Frontend gọi các endpoint sau với **đúng tên field này**. Đổi tên → sửa 1 chỗ
+trong `src/api/endpoints.js`.
 
-**Cách 1 — bật toàn bộ** (khi backend xong hết MVP1):
+### Đã dùng (MVP1)
+```
+GET  /api/projects
+→ [{ id, name, location, zone_count, total_units, sold_pct, status }]
+     status ∈ active | upcoming | archived
+
+GET  /api/projects/{id}
+→ { ...project, launch_date }
+
+GET  /api/projects/{id}/zones
+→ [{ id, name, total_units, units_remaining, status }]
+
+GET  /api/dashboard/summary?project_id=&area_id=&from=&to=
+→ { total_units, units_sold, remaining_units, absorption_rate, avg_velocity, updated_at }
+   (dữ liệu CANONICAL — đã chuẩn hoá; avg_velocity có thể null → UI hiện N/A)
+
+GET  /api/dashboard/trend?project_id=&area_id=&from=&to=
+→ [{ date, units_sold, cumulative_sold, absorption_rate }]
+
+GET  /api/dashboard/areas?project_id=
+→ [{ id, name, total_units, sold, remaining, absorption_rate, velocity, latest_data, status }]
+   velocity có thể null (phân khu mới) → UI hiện N/A, KHÔNG hiện 0.
+
+GET  /api/dashboard/data-quality?project_id=
+→ { latest_data, source, date_range:{from,to}, error_records, status, warnings:[] }
+```
+
+### 🎯 Bài toán lõi — cho AI
+```
+GET  /api/areas/{areaId}/ranking
+→ [{ unit_code, unit_type, area_sqm, score, band }]
+     score : 0–100 (khả năng bán)
+     band  : high | medium | low
+```
+Frontend chỉ hiển thị `score` (thanh %) + `band` (nhãn màu). **AI thay handler
+mock bằng model thật** — không cần đổi frontend nếu giữ đúng schema này.
+
+### Nạp dữ liệu (MVP1)
+```
+POST /api/files/upload   (multipart, field "file")  → { file_id, status }  (409 nếu trùng)
+GET  /api/files                                       → [{ id, filename, status, rows_ok, rows_failed, uploaded_at }]
+GET  /api/files/{id}/status                           → { status, rows_ok, rows_failed }
+GET  /api/files/{id}/errors                           → [{ row_number, column_name, error_code, message }]
+```
+
+### Đã nối API thật
+```
+POST /api/v1/chat   { message } → { response, analysis }   (ChatWidget, dùng forceReal)
+```
+
+### MVP2/MVP3 (đã khai báo sẵn trong endpoints.js, chờ backend)
+`/api/forecasts*` · `/api/alerts` · `/api/auth/*` · `/api/proposals*` · `WS /ws/*`
+
+---
+
+## 4. Bật backend thật
+
+Mock ở `src/api/mock.js`. Hai cách chuyển:
+
+**Toàn bộ:**
 ```js
 // src/api/client.js
 export const USE_MOCK = false;
 ```
-
-**Cách 2 — bật từng endpoint** (khuyến nghị, dùng khi backend xong dần):
+**Từng endpoint** (khuyến nghị khi backend xong dần):
 ```js
-// src/api/endpoints.js
-export const listAreas = () => api.get("/areas", { forceReal: true });
+export const getProject = (id) => api.get(`/projects/${id}`, { forceReal: true });
 ```
-
-Khi `USE_MOCK = true`, thanh điều hướng hiện nhãn vàng **"dữ liệu giả"** — nhãn
-này tự biến mất khi tắt mock, dùng để tránh nhầm lẫn lúc demo.
+Khi `USE_MOCK = true`, topbar hiện nhãn vàng **"dữ liệu giả"** (tự mất khi tắt mock).
 
 ---
 
-## 5. Cấu trúc thư mục
+## 5. Kiến trúc (giữ giúp khi đóng góp code)
 
 ```
 src/
-├── App.jsx                  khung app: thanh nav + router
+├── App.jsx                    router tổng
 ├── api/
-│   ├── client.js            fetch dùng chung · USE_MOCK · forceReal · ApiError
-│   ├── endpoints.js         ★ khai báo mọi endpoint — SỬA Ở ĐÂY khi API đổi
-│   └── mock.js              backend giả (schema khớp SRS)
-├── styles/tokens.js         ★ màu, cỡ chữ, khoảng cách, layout — SỬA Ở ĐÂY khi đổi UI
-├── hooks/useBreakpoint.js   responsive (inline style không dùng được @media)
-├── components/              mảnh giao diện, CHỈ nhận props và vẽ
-└── pages/                   trang, lo lấy dữ liệu + state
+│   ├── client.js              fetch chung · USE_MOCK · forceReal · ApiError · setAccessToken
+│   ├── endpoints.js           ★ MỌI endpoint — sửa ở đây khi API đổi
+│   └── mock.js                backend giả (schema khớp mục 3)
+├── styles/tokens.js           ★ màu/chữ/khoảng cách — sửa ở đây khi đổi nhận diện
+├── hooks/                     useAsync (loading/error) · useBreakpoint (responsive)
+├── components/
+│   ├── AppLayout.jsx          topbar + ChatWidget (bọc trang đã đăng nhập)
+│   ├── Brand.jsx              logo dùng chung
+│   ├── dashboard/             AbsorptionDashboard + 7 section (tái dùng ở /dashboard và S03)
+│   └── ui/                    Icon · States (Skeleton/Empty/Error + fmt) · GlobalKeyframes
+└── pages/                     Home · Login · Projects · ProjectDetail · AreaDetail · Import · Upload
 ```
 
-**Quy ước kiến trúc** (giữ giúp khi đóng góp code):
-- Component **không tự fetch** — chỉ page mới gọi API
-- Không viết thẳng mã màu / cỡ chữ — lấy từ `tokens.js`
-- Không hardcode host — luôn `/api/...`
+**Quy ước:** component KHÔNG tự fetch (chỉ page/AbsorptionDashboard gọi API) ·
+không hardcode màu (lấy từ tokens) · thiếu dữ liệu → `fmt()` hiện **N/A**, giữ số 0 thật ·
+token giữ trong bộ nhớ, không localStorage (NFR-S11).
 
 ---
 
-## 6. Thêm màn hình mới — 5 bước
+## 6. Cần thống nhất với backend
 
-1. Thêm hàm vào `src/api/endpoints.js`
-2. Thêm route giả vào `src/api/mock.js`
-3. Viết component trong `src/components/` (chỉ nhận props)
-4. Viết page trong `src/pages/` (lấy dữ liệu + state)
-5. Gắn `<Route>` và mục nav trong `src/App.jsx`
-
----
-
-## 7. Ràng buộc UI bắt buộc (theo SRS)
-
-Người làm MVP2/MVP3 lưu ý:
-
-- **FR-007** — mọi dự báo phải hiển thị **khoảng tin cậy 90%**. Không bao giờ vẽ
-  đường dự báo trần.
-- **FR-008** — badge cảnh báo khi `confidence_label === "low"`.
-- **FR-015** — từ chối đề xuất **bắt buộc nhập lý do**.
-- **NFR-S2** — ẩn nút theo vai trò chỉ để gọn UI, **không phải bảo mật**. Backend
-  phải chặn thật.
-- Giả định của dự báo (`assumptions`) phải hiển thị rõ cho người duyệt.
+- `avg_velocity`, `velocity`, `sellout_date` có thể `null` không? (UI đã xử lý N/A)
+- Định dạng ngày: ISO `YYYY-MM-DD`?
+- Lỗi: `{detail}` hay `{message}`? (client.js đọc cả hai)
+- Upload trùng: HTTP 409?
+- Dashboard đọc **dữ liệu canonical** (đã chuẩn hoá), không phải file thô.
 
 ---
 
-## 8. Kiểm tra trước khi push
+## 7. Giới hạn hiện tại (frontend)
 
-```bash
-make build-frontend        # CI chạy lệnh này, phải xanh
+- Số liệu từ mock; chờ backend cắm endpoint mục 3.
+- Auth/RBAC là MVP3 — hiện mọi route vào được (chưa chặn quyền).
+- Date range là preset (30d/90d/12m), chưa có date-picker tuỳ chọn.
+- S04 hiện vào bằng URL; nối link từ bảng phân khu ở S03 là bước tiếp theo.
 ```
-- Mở Console (F12) — không có lỗi đỏ
-- Thử ở **1366px** và **375px** (F12 → Ctrl+Shift+M)
-
-> Repo chưa cài test runner cho frontend. Nếu bổ sung, khuyến nghị Vitest +
-> React Testing Library.
-
----
-
-## 9. Liên hệ
-
-**Frontend:** Đặng Tiến Thành — US-003 (xong), US-004 (MVP2), US-011 (MVP3).
-
-Cần từ backend: xác nhận tên field mục 3, thông báo khi endpoint nào sẵn sàng.
-Cần từ MLOps/QA: `mape` theo phân khu, `confidence_label`, ngưỡng "dữ liệu không đủ"
-— để hiển thị chỉ báo độ tin cậy ở MVP2.
-
-Tài liệu kiến trúc chi tiết: `docs/FRONTEND_MVP1_GUIDE.md`
+```

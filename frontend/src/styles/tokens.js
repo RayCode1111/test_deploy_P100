@@ -1,71 +1,58 @@
 // frontend/src/styles/tokens.js
-// ---------------------------------------------------------------------------
-// HỆ THỐNG THIẾT KẾ dùng chung. Mọi component lấy màu/cỡ chữ từ đây, KHÔNG tự
-// bịa mã màu. Nhờ vậy toàn app trông nhất quán, và đổi màu chỉ sửa 1 chỗ.
+// ===========================================================================
+// HỆ THỐNG THIẾT KẾ AbsorbIQ AI — nguồn sự thật duy nhất về giao diện.
+// Mọi component lấy màu/chữ/khoảng cách từ đây; KHÔNG hardcode mã màu ở nơi khác.
+// Đổi nhận diện toàn app = sửa file này.
 //
-// Định hướng: dashboard nghiệp vụ cho ban kinh doanh — cần đọc nhanh, tin cậy,
-// không màu mè. Nền xám rất nhạt, thẻ trắng, một màu nhấn xanh mực cho dữ liệu;
-// màu cảnh báo chỉ dùng cho trạng thái, không dùng để trang trí.
-// ---------------------------------------------------------------------------
+// Nhận diện: indigo (trí tuệ/AI) chủ đạo · emerald cho tín hiệu tích cực
+// (đã bán / khả năng bán cao) · amber cảnh báo · rose rủi ro.
+// Chữ: Space Grotesk (tiêu đề, số) + Inter (nội dung) — nạp trong index.html.
+// ===========================================================================
 
 export const color = {
-  // nền & bề mặt
-  canvas:   "#f4f6f8",   // nền trang
-  surface:  "#ffffff",   // thẻ, bảng
-  border:   "#e3e7eb",
-  borderStrong: "#cfd5db",
+  canvas:   "#f6f6fb",
+  surface:  "#ffffff",
+  border:   "#e8e8f0",
+  borderStrong: "#d8d8e6",
 
-  // chữ
-  ink:      "#1e242b",   // tiêu đề, số liệu
-  body:     "#4a535d",   // chữ thường
-  muted:    "#7b848e",   // nhãn phụ, đơn vị
+  ink:      "#1a1a2e",
+  body:     "#4a4a63",
+  muted:    "#8888a0",
 
-  // nhấn (dữ liệu)
-  accent:   "#1f5fa8",   // đường biểu đồ chính
-  accentSoft: "#e8f0fa",
+  accent:     "#5b52e6",
+  accentSoft: "#efeefe",
 
-  // trạng thái nghiệp vụ
-  danger:   "#b6412c",   // sắp cạn hàng
-  dangerSoft: "#fbeae6",
-  warn:     "#a8720f",   // độ tin cậy thấp
-  warnSoft: "#fdf4e3",
-  ok:       "#256b4a",   // ổn định
-  okSoft:   "#e7f3ec",
+  danger:   "#d24d63",
+  dangerSoft: "#fbe9ec",
+  warn:     "#c8880f",
+  warnSoft: "#fbf1dd",
+  ok:       "#0fae7a",
+  okSoft:   "#e3f7ef",
 };
 
 export const font = {
-  // Dùng font hệ thống: nhanh, không cần tải, hiển thị tiếng Việt tốt
-  sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+  display: '"Space Grotesk", "Inter", system-ui, sans-serif',
+  sans:    '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  mono:    '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
 };
 
 export const size = {
-  // Thang cỡ chữ. Đổi ở đây là cả app đổi theo — không sửa rải rác từng file.
-  // Đã tăng một nấc so với bản đầu để dễ đọc trên màn lớn và khi trình chiếu demo.
-  display: 36,   // số liệu lớn (139, 111, 4.25…)
-  h1: 26,        // tiêu đề trang: "Dashboard hấp thụ"
-  h2: 18,        // tiêu đề khối: "Tốc độ hấp thụ theo thời gian"
-  body: 15,      // chữ thường
-  small: 14,     // nhãn, nút, menu điều hướng
-  tiny: 12.5,    // chú thích, đơn vị
+  display: 36,
+  h1: 26,
+  h2: 18,
+  body: 15,
+  small: 14,
+  tiny: 12.5,
 };
 
-export const radius = { sm: 6, md: 10, lg: 14, pill: 999 };
+export const radius = { sm: 8, md: 12, lg: 16, pill: 999 };
 
-// Bề rộng khung nội dung. Đặt ở đây để đổi 1 chỗ là cả app đổi theo.
-// maxWidth là giới hạn TRÊN — màn nhỏ hơn thì tự co, không tràn.
-// gutter & chartHeight đổi theo cỡ màn (dùng cùng hook useBreakpoint).
+export const space = (n) => n * 4;
+
+export const shadow = "0 1px 3px rgba(26,24,46,.05), 0 1px 10px rgba(26,24,46,.03)";
+
 export const layout = {
   maxWidth: 1400,
-
-  // lề trái/phải theo cỡ màn
-  gutter: { mobile: 16, tablet: 24, laptop: 28, desktop: 32 },
-
-  // chiều cao biểu đồ theo cỡ màn — laptop 13" không bị chart chiếm hết màn
+  gutter:      { mobile: 16, tablet: 24, laptop: 28, desktop: 32 },
   chartHeight: { mobile: 220, tablet: 280, laptop: 320, desktop: 380 },
 };
-
-export const space = (n) => n * 4; // space(3) = 12px
-
-// Bóng rất nhẹ — đủ tách thẻ khỏi nền, không "nổi" quá
-export const shadow = "0 1px 2px rgba(16,24,32,.04), 0 1px 8px rgba(16,24,32,.03)";
