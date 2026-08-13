@@ -1,28 +1,20 @@
 {
+  "version": "1.0",
   "hooks": {
     "UserPromptSubmit": [
       {
         "hooks": [
           {
-            "type": "command",
             "name": "log-prompt",
-            "command": "cmd /c scripts\\_pyrun.cmd scripts\\log_hook.py --tool=codex",
+            "command": "bash scripts/_pyrun.sh scripts/log_hook.py --tool=codex",
             "timeout": 10
           }
         ]
-      }
-    ],
-    "Stop": [
       {
         "hooks": [
           {
-            "type": "command",
             "name": "log-stop",
-            "command": "cmd /c scripts\\_pyrun.cmd scripts\\log_hook.py --tool=codex",
+            "command": "bash scripts/_pyrun.sh scripts/log_hook.py --tool=codex",
             "timeout": 10
           }
         ]
-      }
-    ]
-  }
-}
