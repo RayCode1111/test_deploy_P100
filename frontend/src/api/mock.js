@@ -98,8 +98,109 @@ function computeFileState(f) {
 }
 
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// DỮ LIỆU DASHBOARD (KPI, trend 3 series, so sánh area, data quality)
+// Có CHỦ Ý để vài trường = null để minh hoạ trạng thái "N/A" (missing values).
+// ---------------------------------------------------------------------------
+const DASH_AREAS = [
+  { id: "a1", name: "Sapphire", total_units: 500, sold: 374, remaining: 126, absorption_rate: 74.8, velocity: 4.2, latest_data: "2026-08-05", status: "hot" },
+  { id: "a2", name: "Ruby",     total_units: 480, sold: 293, remaining: 187, absorption_rate: 61.0, velocity: 2.1, latest_data: "2026-08-05", status: "normal" },
+  { id: "a3", name: "Diamond",  total_units: 520, sold: 203, remaining: 317, absorption_rate: 39.0, velocity: 0.6, latest_data: "2026-08-04", status: "slow" },
+  { id: "a4", name: "The Miami (mới mở)", total_units: 300, sold: 12, remaining: 288, absorption_rate: 4.0, velocity: null, latest_data: "2026-08-02", status: "new" },
+];
+
+function dashSummary() {
+  const total = DASH_AREAS.reduce((s, a) => s + a.total_units, 0);
+  const sold = DASH_AREAS.reduce((s, a) => s + a.sold, 0);
+  const vels = DASH_AREAS.map(a => a.velocity).filter(v => v != null);
+  const avgVel = vels.length ? +(vels.reduce((s, v) => s + v, 0) / vels.length).toFixed(1) : null;
+  return {
+    total_units: total,
+    units_sold: sold,
+    remaining_units: total - sold,
+    absorption_rate: +((sold / total) * 100).toFixed(1),
+    avg_velocity: avgVel,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function dashTrend(days = 90) {
+  const TOTAL = 1800;
+  const out = [];
+  let cum = 900;
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const sold = Math.max(0, Math.round(6 + Math.sin(i / 8) * 4 + (Math.random() - 0.5) * 3));
+    cum = Math.min(TOTAL, cum + sold);
+    out.push({
+      date: d.toISOString().slice(0, 10),
+      units_sold: sold,
+      cumulative_sold: cum,
+      absorption_rate: +Math.min(100, (cum / TOTAL) * 100).toFixed(1),
+    });
+  }
+  return out;
+}
+
+// Xếp hạng khả năng bán từng căn (MINH HOẠ). AI thay bằng model thật.
+function unitRanking(areaId) {
+  const seed = { a1: 4, a2: 2, a3: 1, all: 3 }[areaId] ?? 3;
+  const types = ["2PN", "3PN", "Studio", "1PN"];
+  const out = [];
+  for (let i = 0; i < 12; i++) {
+    const score = Math.max(8, Math.min(98, Math.round(95 - i * 6 + Math.sin(i + seed) * 6 + (Math.random() - 0.5) * 6)));
+    const floor = 18 - Math.floor(i / 3);
+    out.push({
+      unit_code: `A-${floor}.${String((i % 12) + 1).padStart(2, "0")}`,
+      unit_type: types[i % types.length],
+      area_sqm: [31, 58, 61, 84, 86][i % 5],
+      score,
+      band: score >= 75 ? "high" : score >= 50 ? "medium" : "low",
+    });
+  }
+  return out.sort((a, b) => b.score - a.score);
+}
+
+function dataQuality() {
+  return {
+    latest_data: "2026-08-05",
+    source: "Dữ liệu chuẩn hoá (canonical)",
+    date_range: { from: "2025-05-01", to: "2026-08-05" },
+    error_records: 5,
+    status: "ok_with_warnings",
+    warnings: [
+      "Phân khu 'The Miami' mới mở, chưa đủ dữ liệu để tính vận tốc.",
+      "5 dòng bị loại do sai định dạng ngày.",
+    ],
+  };
+}
+
 const routes = [
+  { match: (p) => p === "/dashboard/summary", handler: () => dashSummary() },
+  { match: (p) => p.startsWith("/dashboard/trend"), handler: () => dashTrend() },
+  { match: (p) => p === "/dashboard/areas", handler: () => DASH_AREAS },
+  { match: (p) => p === "/dashboard/data-quality", handler: () => dataQuality() },
+
   { match: (p) => p === "/projects", handler: () => PROJECTS },
+  {
+    match: (p) => /^\/projects\/[^/]+$/.test(p),
+    handler: (path) => {
+      const id = path.split("/")[2];
+      const p = PROJECTS.find((x) => x.id === id);
+      if (!p) { const e = new Error("Không tìm thấy dự án"); e.status = 404; throw e; }
+      return { ...p, launch_date: "2025-06-01" };
+    },
+  },
+  {
+    // Xếp hạng khả năng bán từng căn trong 1 phân khu (bài toán lõi).
+    // AI sẽ thay handler này bằng model thật -> [{ unit_code, unit_type, area_sqm, score, band }]
+    match: (p) => /^\/areas\/[^/]+\/ranking$/.test(p),
+    handler: (path) => {
+      const areaId = path.split("/")[2];
+      return unitRanking(areaId);
+    },
+  },
   {
     match: (p) => /^\/projects\/[^/]+\/zones$/.test(p),
     handler: (path) => {
