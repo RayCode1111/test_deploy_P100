@@ -22,7 +22,16 @@ export function SalesTeam() {
   const [search, setSearch] = useState("");
 
   useEffect(() => { fetchSalesTeamKpis().then(setKpis); }, []);
-  useEffect(() => { fetchSalesTeam({ search }).then((s) => { setStaff(s); if (!selected && s[0]) setSelected(s[0]); }); }, [search]);
+  useEffect(() => {
+    let active = true; // tránh race condition khi gõ tìm nhanh
+    fetchSalesTeam({ search }).then((s) => {
+      if (!active) return;
+      setStaff(s);
+      // dùng functional update để không phụ thuộc biến `selected` (tránh stale closure)
+      setSelected((cur) => cur ?? s[0] ?? null);
+    });
+    return () => { active = false; };
+  }, [search]);
 
   return (
     <div className="flex">

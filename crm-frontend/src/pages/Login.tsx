@@ -119,6 +119,10 @@ export function Login() {
             <button className="btn-ghost w-full py-3">
               <Building2 className="h-4 w-4" /> Đăng nhập bằng SSO
             </button>
+
+            <p className="rounded-lg bg-surface-page px-3 py-2 text-center text-xs text-ink-muted">
+              Chế độ demo: nhập email bất kỳ và mật khẩu ≥ 6 ký tự để vào.
+            </p>
           </div>
         </div>
 

@@ -22,7 +22,11 @@ export function Units() {
   const [deleting, setDeleting] = useState<Unit | null>(null);
 
   function reload() { fetchUnits({ search, status: statusFilter }).then(setUnits); }
-  useEffect(() => { fetchUnits({ search, status: statusFilter }).then(setUnits); }, [search, statusFilter]);
+  useEffect(() => {
+    let active = true; // bỏ qua kết quả nếu effect đã bị thay thế (tránh race condition)
+    fetchUnits({ search, status: statusFilter }).then((u) => { if (active) setUnits(u); });
+    return () => { active = false; };
+  }, [search, statusFilter]);
 
   async function handleSave(u: Partial<Unit>) {
     if (modalUnit) await updateUnit(modalUnit.id, u); else await createUnit(u);

@@ -34,8 +34,11 @@ export function ProjectDetail() {
 
   useEffect(() => {
     if (!projectId) return;
-    fetchProjectById(projectId).then((p) => setProject(p ?? null));
-    fetchAreas(projectId).then(setAreas);
+    let active = true; // bỏ qua kết quả nếu đổi projectId trước khi request về
+    // fetchProjectById/fetchAreas là import tĩnh (ổn định) nên chỉ cần [projectId]
+    fetchProjectById(projectId).then((p) => { if (active) setProject(p ?? null); });
+    fetchAreas(projectId).then((a) => { if (active) setAreas(a); });
+    return () => { active = false; };
   }, [projectId]);
 
   if (!project) return <div className="p-8 text-ink-muted">Đang tải…</div>;

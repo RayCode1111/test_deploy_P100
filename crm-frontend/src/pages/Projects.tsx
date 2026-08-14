@@ -20,7 +20,11 @@ export function Projects() {
   const [page, setPage] = useState(1);
 
   useEffect(() => { fetchProjectKpis().then(setKpis); }, []);
-  useEffect(() => { fetchProjects(search).then(setProjects); }, [search]);
+  useEffect(() => {
+    let active = true; // tránh race condition khi gõ tìm nhanh
+    fetchProjects(search).then((p) => { if (active) setProjects(p); });
+    return () => { active = false; };
+  }, [search]);
 
   return (
     <div className="px-6 py-6">

@@ -24,12 +24,18 @@ export async function login(email: string, password: string): Promise<LoginRespo
     if (!res.ok) throw new Error("Email hoặc mật khẩu không đúng");
     return res.json();
   }
-  // Mock: chấp nhận tài khoản demo
+  // Mock: KHÔNG ghi cứng mật khẩu trong source (tránh lộ secret trong bundle).
+  // Ở chế độ demo, chấp nhận mọi email hợp lệ + mật khẩu tối thiểu 6 ký tự.
+  // Khi USE_MOCK = false, xác thực thật do backend đảm nhiệm ở nhánh trên.
   await delay(null, 600);
-  if (email === "admin@absorptioncrm.com" && password === "123456") {
-    return { token: "mock-jwt-token-" + Date.now(), user: M.currentUser };
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (emailOk && password.length >= 6) {
+    return {
+      token: "mock-jwt-token-" + Date.now(),
+      user: { ...M.currentUser, email },
+    };
   }
-  throw new Error("Email hoặc mật khẩu không đúng. Thử admin@absorptioncrm.com / 123456");
+  throw new Error("Email không hợp lệ hoặc mật khẩu quá ngắn (tối thiểu 6 ký tự).");
 }
 
 // ---------- Dashboard ----------
