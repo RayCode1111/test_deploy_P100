@@ -11,8 +11,8 @@
 import { mockFetch } from "./mock";
 
 // 🔴 CÔNG TẮC: true = dùng backend giả · false = gọi backend thật
-// Backend nghiệp vụ chưa xong nên tạm để true. Xong thì đổi thành false.
-export const USE_MOCK = true;
+// Đọc từ biến môi trường VITE_USE_MOCK. Mặc định là true nếu không set.
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== "false";
 
 const BASE = "/api";
 
